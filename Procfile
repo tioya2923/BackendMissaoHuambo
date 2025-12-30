@@ -1,0 +1,1 @@
+web: dotnet NomeDaApp.dll

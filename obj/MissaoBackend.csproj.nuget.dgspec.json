@@ -17,14 +17,14 @@
           "C:\\Users\\TrendingPc\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
-          "net9.0"
+          "net6.0"
         ],
         "sources": {
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
-          "net9.0": {
-            "targetAlias": "net9.0",
+          "net6.0": {
+            "targetAlias": "net6.0",
             "projectReferences": {}
           }
         },
@@ -41,34 +41,30 @@
         "SdkAnalysisLevel": "9.0.300"
       },
       "frameworks": {
-        "net9.0": {
-          "targetAlias": "net9.0",
+        "net6.0": {
+          "targetAlias": "net6.0",
           "dependencies": {
             "Microsoft.AspNetCore.Authentication.JwtBearer": {
               "target": "Package",
-              "version": "[9.0.9, )"
-            },
-            "Microsoft.AspNetCore.OpenApi": {
-              "target": "Package",
-              "version": "[9.0.9, )"
+              "version": "[6.0.25, )"
             },
             "Microsoft.EntityFrameworkCore.Design": {
               "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
               "suppressParent": "All",
               "target": "Package",
-              "version": "[9.0.0, )"
+              "version": "[6.0.25, )"
             },
             "Microsoft.IdentityModel.Tokens": {
               "target": "Package",
-              "version": "[8.15.0, )"
+              "version": "[6.35.0, )"
             },
             "MySql.Data": {
               "target": "Package",
-              "version": "[9.5.0, )"
+              "version": "[8.4.0, )"
             },
             "Pomelo.EntityFrameworkCore.MySql": {
               "target": "Package",
-              "version": "[9.0.0, )"
+              "version": "[6.0.2, )"
             },
             "Swashbuckle.AspNetCore": {
               "target": "Package",
@@ -76,7 +72,7 @@
             },
             "System.IdentityModel.Tokens.Jwt": {
               "target": "Package",
-              "version": "[8.15.0, )"
+              "version": "[6.35.0, )"
             }
           },
           "imports": [
@@ -90,6 +86,24 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
+          "downloadDependencies": [
+            {
+              "name": "Microsoft.AspNetCore.App.Ref",
+              "version": "[6.0.36, 6.0.36]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Host.win-x64",
+              "version": "[6.0.36, 6.0.36]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Ref",
+              "version": "[6.0.36, 6.0.36]"
+            },
+            {
+              "name": "Microsoft.WindowsDesktop.App.Ref",
+              "version": "[6.0.36, 6.0.36]"
+            }
+          ],
           "frameworkReferences": {
             "Microsoft.AspNetCore.App": {
               "privateAssets": "none"
@@ -98,7 +112,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.305/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.305\\RuntimeIdentifierGraph.json"
         }
       }
     }

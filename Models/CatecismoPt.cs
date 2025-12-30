@@ -6,8 +6,8 @@ namespace MissaoBackend.Models
     {
         [Key]
         public int Id { get; set; }
-        public required string Titulo { get; set; }
-        public required string Texto { get; set; }
+        public string Titulo { get; set; }
+        public string Texto { get; set; }
         public string? Slug { get; set; }
 
         public int? CatecismoPtTopicoId { get; set; }
