@@ -7,7 +7,7 @@ namespace MissaoBackend.Models
     {
         [Key]
         public int Id { get; set; }
-        public string Titulo { get; set; }
+        public string Titulo { get; set; } = string.Empty;
         public string? Slug { get; set; }
 
         public List<CatecismoUb> CatecismosUb { get; set; } = new();
