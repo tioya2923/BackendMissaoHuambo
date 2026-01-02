@@ -12,17 +12,16 @@ var builder = WebApplication.CreateBuilder(args);
 
 const string MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 
-// CORS
+// --- CONFIGURAÇÃO DE SERVIÇOS ---
+
+// CORS: Adicionado suporte para ambientes locais e produção
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(MyAllowSpecificOrigins, policy =>
     {
-        policy.WithOrigins(
-                "http://localhost:5018",
-                "http://localhost:3000")
+        policy.AllowAnyOrigin() // Em desenvolvimento/teste facilita, mas pode restringir depois
               .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
+              .AllowAnyMethod();
     });
 });
 
@@ -61,14 +60,13 @@ builder.Services.AddSwaggerGen(options =>
     };
 
     options.AddSecurityDefinition("Bearer", securityScheme);
-
     options.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         { securityScheme, Array.Empty<string>() }
     });
 });
 
-// JWT
+// JWT Configuration
 var jwtSection = builder.Configuration.GetSection("Jwt");
 var jwtKey = jwtSection["Key"];
 var jwtIssuer = jwtSection["Issuer"];
@@ -76,9 +74,6 @@ var jwtAudience = jwtSection["Audience"];
 
 if (string.IsNullOrWhiteSpace(jwtKey))
     throw new InvalidOperationException("Jwt:Key is missing.");
-
-if (string.IsNullOrWhiteSpace(jwtIssuer) || string.IsNullOrWhiteSpace(jwtAudience))
-    throw new InvalidOperationException("Jwt:Issuer or Jwt:Audience is missing.");
 
 var key = Encoding.UTF8.GetBytes(jwtKey);
 
@@ -101,17 +96,18 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-// Swagger
-if (app.Environment.IsDevelopment())
+// --- PIPELINE DE MIDDLEWARE ---
+
+// Swagger: Habilitado fora do if(IsDevelopment) para funcionar no Render
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Missão API v1");
+    c.RoutePrefix = string.Empty; // Define o Swagger como página inicial
+});
 
 app.UseStaticFiles();
-
 app.UseRouting();
-
 app.UseCors(MyAllowSpecificOrigins);
 
 app.UseAuthentication();
@@ -119,17 +115,22 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// Seed + Teste de conexão
+// --- MIGRATIONS E SEED DATA ---
+// Usando 'await using' para garantir o dispose correto de recursos assíncronos
 using (var scope = app.Services.CreateScope())
 {
     try
     {
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
+        // 1. Aplica Migrations Pendentes (Cria tabelas se não existirem)
+        Console.WriteLine("→ Aplicando migrations...");
+        await db.Database.MigrateAsync();
+
         if (await db.Database.CanConnectAsync())
             Console.WriteLine("✓ Ligação à base de dados bem-sucedida!");
 
-        // Seed Tópicos Umbundu
+        // 2. Seed Tópicos Umbundu
         if (!await db.TopicosUmb.AnyAsync())
         {
             var topicosPt = await db.Topicos.ToListAsync();
@@ -149,14 +150,13 @@ using (var scope = app.Services.CreateScope())
             }
         }
 
-        // Seed Gestor admin
+        // 3. Seed Gestor admin
         var adminEmail = "ad@exemplo.com";
         var adminPassword = "19101989";
 
         if (!await db.Gestores.AnyAsync(g => g.Email == adminEmail))
         {
             var hash = PasswordHasher.Hash(adminPassword);
-
             db.Gestores.Add(new Gestor
             {
                 Nome = "Administrador",
@@ -168,7 +168,7 @@ using (var scope = app.Services.CreateScope())
             Console.WriteLine($"✓ Administrador criado: {adminEmail}");
         }
 
-        // Seed CanticoUmb
+        // 4. Seed CanticoUmb
         if (!await db.CanticosUmb.AnyAsync())
         {
             var topico = await db.TopicosUmb.FirstOrDefaultAsync();
@@ -184,18 +184,15 @@ using (var scope = app.Services.CreateScope())
 
                 db.CanticosUmb.Add(cantico);
                 await db.SaveChangesAsync();
-
-                Console.WriteLine($"✓ CanticoUmb seeded: {cantico.Titulo} (id={cantico.Id})");
-            }
-            else
-            {
-                Console.WriteLine("✗ Nenhum tópico Umbundu encontrado para associar ao CanticoUmb.");
+                Console.WriteLine($"✓ CanticoUmb seeded: {cantico.Titulo}");
             }
         }
     }
     catch (Exception ex)
     {
-        Console.WriteLine("✗ Erro ao ligar à base de dados: " + ex.Message);
+        Console.WriteLine("✗ Erro durante a inicialização: " + ex.Message);
+        if (ex.InnerException != null) 
+            Console.WriteLine("Inner Exception: " + ex.InnerException.Message);
     }
 }
 
