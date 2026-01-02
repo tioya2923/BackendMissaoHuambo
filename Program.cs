@@ -19,9 +19,13 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy(MyAllowSpecificOrigins, policy =>
     {
-        policy.AllowAnyOrigin() // Em desenvolvimento/teste facilita, mas pode restringir depois
+        policy.WithOrigins(
+                "http://localhost:5018",
+                "http://localhost:3000",
+                "https://missao-no-huambo-frontend-b3583f0178f6.herokuapp.com")
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+              .AllowCredentials();
     });
 });
 
