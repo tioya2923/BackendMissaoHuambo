@@ -38,6 +38,7 @@ public class AppDbContext : DbContext
             .IsUnique();
 
         modelBuilder.Entity<TopicoUmb>()
+            .ToTable("TopicoUmb")
             .HasIndex(t => t.Slug)
             .IsUnique();
 
