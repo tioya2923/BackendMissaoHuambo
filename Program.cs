@@ -23,7 +23,8 @@ builder.Services.AddCors(options =>
                 "http://localhost:5018",
                 "http://localhost:3000",
                 "https://www.missaonohuambo.org", 
-                "https://missaonohuambo.org")
+                "https://missaonohuambo.org",
+                "https://missao-no-huambo-frontend-b3583f0178f6.herokuapp.com")
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
