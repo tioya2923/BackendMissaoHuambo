@@ -11,7 +11,7 @@ using MissaoBackend.Data;
 namespace MissaoBackend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260102010356_Inicial")]
+    [Migration("20260102014154_Inicial")]
     partial class Inicial
     {
         /// <inheritdoc />

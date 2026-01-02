@@ -9,7 +9,7 @@ RUN dotnet restore
 
 # Copia o restante do código e publica
 COPY . ./
-RUN dotnet publish -c Release -o out
+RUN dotnet publish MissaoBackend.csproj -c Release -o out
 
 # Etapa de runtime
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
