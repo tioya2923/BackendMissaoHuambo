@@ -21,6 +21,8 @@ public class AppDbContext : DbContext
     public DbSet<CatecismoPtTopico> CatecismoPtTopicos => Set<CatecismoPtTopico>();
     public DbSet<CatecismoUbTopico> CatecismoUbTopicos => Set<CatecismoUbTopico>();
 
+    public DbSet<Photo> Photos => Set<Photo>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
