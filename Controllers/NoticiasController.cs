@@ -50,5 +50,27 @@ namespace MissaoBackend.Controllers
             await _context.SaveChangesAsync();
             return CreatedAtAction(nameof(GetById), new { id = noticia.Id }, noticia);
         }
+        /// <summary>
+        /// Remove todas as notícias e apaga as imagens associadas do disco.
+        /// </summary>
+        [HttpDelete("all")]
+        public async Task<IActionResult> DeleteAllNoticias()
+        {
+            var noticias = await _context.Noticias.ToListAsync();
+            foreach (var noticia in noticias)
+            {
+                if (!string.IsNullOrEmpty(noticia.ImagemUrl))
+                {
+                    var filePath = Path.Combine("wwwroot", noticia.ImagemUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                    if (System.IO.File.Exists(filePath))
+                    {
+                        try { System.IO.File.Delete(filePath); } catch { /* Ignorar erro */ }
+                    }
+                }
+            }
+            _context.Noticias.RemoveRange(noticias);
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
     }
 }
