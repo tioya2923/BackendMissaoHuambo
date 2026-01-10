@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using MissaoBackend.Services;
 
+#if DEBUG
 [ApiController]
 [Route("api/[controller]")]
 public class DebugController : ControllerBase
@@ -12,3 +13,4 @@ public class DebugController : ControllerBase
         return Ok(new { password, hash });
     }
 }
+#endif

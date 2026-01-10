@@ -34,7 +34,8 @@ builder.Services.AddCors(options =>
 // DbContext + MySQL
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    var cs = builder.Configuration.GetConnectionString("DefaultConnection");
+    var cs = Environment.GetEnvironmentVariable("DB_CONNECTION_STRING")
+        ?? builder.Configuration.GetConnectionString("DefaultConnection");
     options.UseMySql(cs, new MySqlServerVersion(new Version(8, 0, 34)));
 });
 
@@ -72,11 +73,14 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
+
 // JWT Configuration
-var jwtSection = builder.Configuration.GetSection("Jwt");
-var jwtKey = jwtSection["Key"];
-var jwtIssuer = jwtSection["Issuer"];
-var jwtAudience = jwtSection["Audience"];
+var jwtKey = Environment.GetEnvironmentVariable("JWT_KEY")
+    ?? builder.Configuration.GetSection("Jwt")["Key"];
+var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER")
+    ?? builder.Configuration.GetSection("Jwt")["Issuer"];
+var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE")
+    ?? builder.Configuration.GetSection("Jwt")["Audience"];
 
 if (string.IsNullOrWhiteSpace(jwtKey))
     throw new InvalidOperationException("Jwt:Key is missing.");
@@ -101,10 +105,13 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 
 
-// Força URLs HTTP em produção/container
+// Configuração HTTPS automática via appsettings.Production.json
 if (builder.Environment.IsProduction())
 {
-    builder.WebHost.UseUrls("http://*:10000");
+    builder.WebHost.ConfigureKestrel((context, options) =>
+    {
+        options.Configure(context.Configuration.GetSection("Kestrel"));
+    });
 }
 var app = builder.Build();
 
