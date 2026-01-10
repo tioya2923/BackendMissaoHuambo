@@ -100,6 +100,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
+
+// Força URLs HTTP em produção/container
+if (builder.Environment.IsProduction())
+{
+    builder.WebHost.UseUrls("http://*:10000");
+}
 var app = builder.Build();
 
 // --- PIPELINE DE MIDDLEWARE ---
