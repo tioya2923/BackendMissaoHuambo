@@ -20,11 +20,11 @@ builder.Services.AddCors(options =>
     options.AddPolicy(MyAllowSpecificOrigins, policy =>
     {
         policy.WithOrigins(
-                "http://localhost:5018",
-                "http://localhost:3000",
-                "https://www.missaonohuambo.org", 
-                "https://missaonohuambo.org",
-                "https://missao-no-huambo-frontend-b3583f0178f6.herokuapp.com")
+            "https://localhost:7170",
+            "https://localhost:3000",
+            "https://www.missaonohuambo.org", 
+            "https://missaonohuambo.org",
+            "https://missao-no-huambo-frontend-b3583f0178f6.herokuapp.com")
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();

@@ -1,4 +1,6 @@
-@MissaoBackend_HostAddress = http://localhost:5018
+
+# Use HTTPS para evitar conteúdo misto
+@MissaoBackend_HostAddress = https://localhost:7170
 
 GET {{MissaoBackend_HostAddress}}/weatherforecast/
 Accept: application/json
