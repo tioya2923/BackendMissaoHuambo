@@ -1,3 +1,4 @@
+using DotNetEnv;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -8,13 +9,16 @@ using MissaoBackend.Services;
 using MissaoBackend.Utils;
 using MissaoBackend.Models;
 
+// Carrega variáveis do arquivo .env automaticamente
+Env.Load();
+
 var builder = WebApplication.CreateBuilder(args);
 
 const string MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 
 // --- CONFIGURAÇÃO DE SERVIÇOS ---
 
-// CORS: Adicionado suporte para ambientes locais e produção
+// CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(MyAllowSpecificOrigins, policy =>
@@ -22,12 +26,12 @@ builder.Services.AddCors(options =>
         policy.WithOrigins(
             "https://localhost:7170",
             "https://localhost:3000",
-            "https://www.missaonohuambo.org", 
+            "https://www.missaonohuambo.org",
             "https://missaonohuambo.org",
             "https://missao-no-huambo-frontend-b3583f0178f6.herokuapp.com")
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
 });
 
@@ -36,6 +40,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 {
     var cs = Environment.GetEnvironmentVariable("DB_CONNECTION_STRING")
         ?? builder.Configuration.GetConnectionString("DefaultConnection");
+
     options.UseMySql(cs, new MySqlServerVersion(new Version(8, 0, 34)));
 });
 
@@ -73,14 +78,13 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-
 // JWT Configuration
 var jwtKey = Environment.GetEnvironmentVariable("JWT_KEY")
-    ?? builder.Configuration.GetSection("Jwt")["Key"];
+    ?? builder.Configuration["Jwt:Key"];
 var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER")
-    ?? builder.Configuration.GetSection("Jwt")["Issuer"];
+    ?? builder.Configuration["Jwt:Issuer"];
 var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE")
-    ?? builder.Configuration.GetSection("Jwt")["Audience"];
+    ?? builder.Configuration["Jwt:Audience"];
 
 if (string.IsNullOrWhiteSpace(jwtKey))
     throw new InvalidOperationException("Jwt:Key is missing.");
@@ -104,8 +108,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
-
-// Configuração HTTPS automática via appsettings.Production.json
+// HTTPS (produção)
 if (builder.Environment.IsProduction())
 {
     builder.WebHost.ConfigureKestrel((context, options) =>
@@ -113,16 +116,16 @@ if (builder.Environment.IsProduction())
         options.Configure(context.Configuration.GetSection("Kestrel"));
     });
 }
+
 var app = builder.Build();
 
 // --- PIPELINE DE MIDDLEWARE ---
 
-// Swagger: Habilitado fora do if(IsDevelopment) para funcionar no Render
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "Missão API v1");
-    c.RoutePrefix = string.Empty; // Define o Swagger como página inicial
+    c.RoutePrefix = string.Empty;
 });
 
 app.UseStaticFiles();
@@ -135,21 +138,19 @@ app.UseAuthorization();
 app.MapControllers();
 
 // --- MIGRATIONS E SEED DATA ---
-// Usando 'await using' para garantir o dispose correto de recursos assíncronos
 using (var scope = app.Services.CreateScope())
 {
     try
     {
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        // 1. Aplica Migrations Pendentes (Cria tabelas se não existirem)
         Console.WriteLine("→ Aplicando migrations...");
         await db.Database.MigrateAsync();
 
         if (await db.Database.CanConnectAsync())
             Console.WriteLine("✓ Ligação à base de dados bem-sucedida!");
 
-        // 2. Seed Tópicos Umbundu
+        // Seed Tópicos Umbundu
         if (!await db.TopicosUmb.AnyAsync())
         {
             var topicosPt = await db.Topicos.ToListAsync();
@@ -169,12 +170,14 @@ using (var scope = app.Services.CreateScope())
             }
         }
 
-        // 3. Seed Gestor admin
-        var adminEmail = Environment.GetEnvironmentVariable("ADMIN_EMAIL") ?? builder.Configuration["Admin:Email"];
-        var adminPassword = Environment.GetEnvironmentVariable("ADMIN_PASSWORD") ?? builder.Configuration["Admin:Password"];
+        // Seed Gestor admin
+        var adminEmail = Environment.GetEnvironmentVariable("ADMIN_EMAIL")
+            ?? builder.Configuration["Admin:Email"];
+        var adminPassword = Environment.GetEnvironmentVariable("ADMIN_PASSWORD")
+            ?? builder.Configuration["Admin:Password"];
 
         if (string.IsNullOrWhiteSpace(adminEmail) || string.IsNullOrWhiteSpace(adminPassword))
-            throw new InvalidOperationException("Admin email ou password não definidos. Configure via variáveis de ambiente ou appsettings.");
+            throw new InvalidOperationException("Admin email ou password não definidos.");
 
         if (!await db.Gestores.AnyAsync(g => g.Email == adminEmail))
         {
@@ -190,8 +193,9 @@ using (var scope = app.Services.CreateScope())
             Console.WriteLine($"✓ Administrador criado: {adminEmail}");
         }
 
-        // 4. Seed CanticoUmb
-        if (!await db.CanticosUmb.AnyAsync())
+        // Seed CanticoUmb
+       if (!await db.CanticosUmb.AnyAsync())
+
         {
             var topico = await db.TopicosUmb.FirstOrDefaultAsync();
             if (topico != null)
@@ -213,7 +217,7 @@ using (var scope = app.Services.CreateScope())
     catch (Exception ex)
     {
         Console.WriteLine("✗ Erro durante a inicialização: " + ex.Message);
-        if (ex.InnerException != null) 
+        if (ex.InnerException != null)
             Console.WriteLine("Inner Exception: " + ex.InnerException.Message);
     }
 }

@@ -114,3 +114,7 @@ C:\Projects\missao\MissaoBackend\obj\Debug\net8.0\refint\MissaoBackend.dll
 C:\Projects\missao\MissaoBackend\obj\Debug\net8.0\MissaoBackend.pdb
 C:\Projects\missao\MissaoBackend\obj\Debug\net8.0\MissaoBackend.genruntimeconfig.cache
 C:\Projects\missao\MissaoBackend\obj\Debug\net8.0\ref\MissaoBackend.dll
+C:\Projects\missao\MissaoBackend\bin\Debug\net8.0\appsettings.Production.json
+C:\Projects\missao\MissaoBackend\bin\Debug\net8.0\BCrypt.Net-Next.dll
+C:\Projects\missao\MissaoBackend\bin\Debug\net8.0\DotNetEnv.dll
+C:\Projects\missao\MissaoBackend\bin\Debug\net8.0\Sprache.dll
