@@ -170,8 +170,11 @@ using (var scope = app.Services.CreateScope())
         }
 
         // 3. Seed Gestor admin
-        var adminEmail = "ad@exemplo.com";
-        var adminPassword = "19101989";
+        var adminEmail = Environment.GetEnvironmentVariable("ADMIN_EMAIL") ?? builder.Configuration["Admin:Email"];
+        var adminPassword = Environment.GetEnvironmentVariable("ADMIN_PASSWORD") ?? builder.Configuration["Admin:Password"];
+
+        if (string.IsNullOrWhiteSpace(adminEmail) || string.IsNullOrWhiteSpace(adminPassword))
+            throw new InvalidOperationException("Admin email ou password não definidos. Configure via variáveis de ambiente ou appsettings.");
 
         if (!await db.Gestores.AnyAsync(g => g.Email == adminEmail))
         {
