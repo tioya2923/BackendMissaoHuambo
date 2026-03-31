@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "jSEBiKoqlhs=",
+  "success": true,
+  "projectFilePath": "C:\\Projects\\missao\\MissaoBackend\\HashGenTemp\\HashGenTemp.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\TrendingPc\\.nuget\\packages\\bcrypt.net-next\\4.1.0\\bcrypt.net-next.4.1.0.nupkg.sha512"
+  ],
+  "logs": []
+}
