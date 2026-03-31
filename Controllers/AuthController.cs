@@ -7,7 +7,6 @@ using System.IdentityModel.Tokens.Jwt;
 
 using MissaoBackend.Data;
 using MissaoBackend.Models;
-using MissaoBackend.Services;
 
 namespace MissaoBackend.Controllers;
 
