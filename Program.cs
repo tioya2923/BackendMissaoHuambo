@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using MissaoBackend.Data;
-using MissaoBackend.Services;
 using MissaoBackend.Utils;
 using MissaoBackend.Models;
 
