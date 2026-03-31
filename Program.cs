@@ -181,12 +181,11 @@ using (var scope = app.Services.CreateScope())
 
         if (!await db.Gestores.AnyAsync(g => g.Email == adminEmail))
         {
-            var hash = PasswordHasher.Hash(adminPassword);
             db.Gestores.Add(new Gestor
             {
                 Nome = "Administrador",
                 Email = adminEmail,
-                PasswordHash = hash
+                Password = adminPassword
             });
 
             await db.SaveChangesAsync();

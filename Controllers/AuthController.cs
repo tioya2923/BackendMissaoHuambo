@@ -36,7 +36,7 @@ public class AuthController : ControllerBase
             return BadRequest("Email e password são obrigatórios.");
 
         var gestor = await _db.Gestores.FirstOrDefaultAsync(g => g.Email == req.Email);
-        if (gestor == null || !PasswordHasher.Verify(req.Password, gestor.PasswordHash))
+        if (gestor == null || gestor.Password != req.Password)
             return Unauthorized("Credenciais inválidas.");
 
         var jwtSection = _config.GetSection("Jwt");
