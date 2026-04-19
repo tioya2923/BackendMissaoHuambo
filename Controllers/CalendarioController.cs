@@ -17,28 +17,45 @@ public class CalendarioController : ControllerBase
         _db = db;
     }
 
-    // GET /api/calendario?data=2025-12-23
+    // GET /api/calendario?inicio=2025-12-23&fim=2025-12-29
+    // GET /api/calendario?data=2025-12-23  (retrocompatível)
     [HttpGet]
-    public async Task<IActionResult> GetByDate([FromQuery] string? data)
+    public async Task<IActionResult> GetByDate(
+        [FromQuery] string? data,
+        [FromQuery] string? inicio,
+        [FromQuery] string? fim)
     {
-        if (string.IsNullOrWhiteSpace(data))
+        // Intervalo de datas
+        if (!string.IsNullOrWhiteSpace(inicio) && !string.IsNullOrWhiteSpace(fim))
         {
-            var all = await _db.Eventos.OrderBy(e => e.Data).ToListAsync();
-            return Ok(all);
+            if (!DateTime.TryParse(inicio, out var dtInicio) || !DateTime.TryParse(fim, out var dtFim))
+                return BadRequest("Datas inválidas. Formato ISO esperado (YYYY-MM-DD).");
+
+            var range = await _db.Eventos
+                .Where(e => e.Data >= dtInicio.Date && e.Data < dtFim.Date.AddDays(1))
+                .OrderBy(e => e.Data)
+                .ToListAsync();
+
+            return Ok(range);
         }
 
-        if (!DateTime.TryParse(data, out var dt))
-            return BadRequest("Data inválida. Formato ISO esperado (YYYY-MM-DD).");
+        // Dia específico
+        if (!string.IsNullOrWhiteSpace(data))
+        {
+            if (!DateTime.TryParse(data, out var dt))
+                return BadRequest("Data inválida. Formato ISO esperado (YYYY-MM-DD).");
 
-        var dayStart = dt.Date;
-        var dayEnd = dayStart.AddDays(1);
+            var ev = await _db.Eventos
+                .Where(e => e.Data >= dt.Date && e.Data < dt.Date.AddDays(1))
+                .OrderBy(e => e.Data)
+                .ToListAsync();
 
-        var ev = await _db.Eventos
-            .Where(e => e.Data >= dayStart && e.Data < dayEnd)
-            .OrderBy(e => e.Data)
-            .ToListAsync();
+            return Ok(ev);
+        }
 
-        return Ok(ev);
+        // Sem filtro — todos os eventos
+        var all = await _db.Eventos.OrderBy(e => e.Data).ToListAsync();
+        return Ok(all);
     }
 
     [HttpPost]
