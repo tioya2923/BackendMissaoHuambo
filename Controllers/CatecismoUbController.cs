@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MissaoBackend.Data;
 using MissaoBackend.Models;
@@ -33,6 +34,7 @@ namespace MissaoBackend.Controllers
         }
 
         [HttpPost]
+        [Authorize]
         public async Task<ActionResult<CatecismoUb>> Create(CatecismoUb catecismo)
         {
             _context.CatecismosUb.Add(catecismo);
@@ -41,6 +43,7 @@ namespace MissaoBackend.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize]
         public async Task<IActionResult> Update(int id, CatecismoUb catecismo)
         {
             if (id != catecismo.Id) return BadRequest();
@@ -50,6 +53,7 @@ namespace MissaoBackend.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize]
         public async Task<IActionResult> Delete(int id)
         {
             var item = await _context.CatecismosUb.FindAsync(id);

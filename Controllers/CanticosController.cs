@@ -11,7 +11,17 @@ namespace MissaoBackend.Controllers
     [Route("api/[controller]")]
     public class CanticosController : ControllerBase
     {
+        private readonly AppDbContext _db;
+        private readonly IWebHostEnvironment _env;
+
+        public CanticosController(AppDbContext db, IWebHostEnvironment env)
+        {
+            _db = db;
+            _env = env;
+        }
+
         [HttpPost("topico")]
+        [Authorize]
         public async Task<ActionResult<Topico>> CreateTopico(Topico input)
         {
             if (string.IsNullOrWhiteSpace(input.Slug) && !string.IsNullOrWhiteSpace(input.Nome))
@@ -21,14 +31,6 @@ namespace MissaoBackend.Controllers
             _db.Topicos.Add(input);
             await _db.SaveChangesAsync();
             return Created($"/api/Canticos/topico/{input.Slug}", input);
-        }
-        private readonly AppDbContext _db;
-        private readonly IWebHostEnvironment _env;
-
-        public CanticosController(AppDbContext db, IWebHostEnvironment env)
-        {
-            _db = db;
-            _env = env;
         }
 
         [HttpGet("topico/{slug}")]
@@ -128,6 +130,10 @@ namespace MissaoBackend.Controllers
             if (file == null || file.Length == 0)
                 return BadRequest("Nenhum ficheiro enviado.");
 
+            var ext = Path.GetExtension(file.FileName);
+            if (!string.Equals(ext, ".pdf", StringComparison.OrdinalIgnoreCase))
+                return BadRequest("Apenas ficheiros PDF são permitidos.");
+
             var root = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
             var uploadsDir = Path.Combine(root, "partituras");
             Directory.CreateDirectory(uploadsDir);
@@ -145,6 +151,5 @@ namespace MissaoBackend.Controllers
 
             return Ok(new { cantico.Id, cantico.PdfUrl });
         }
-
     }
 }

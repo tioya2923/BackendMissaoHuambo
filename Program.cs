@@ -7,6 +7,7 @@ using Microsoft.OpenApi.Models;
 using MissaoBackend.Data;
 using MissaoBackend.Utils;
 using MissaoBackend.Models;
+using MissaoBackend.Services;
 
 // Carrega variáveis do arquivo .env automaticamente
 Env.Load();
@@ -46,36 +47,39 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
-// Swagger + JWT
-builder.Services.AddSwaggerGen(options =>
+// Swagger apenas em Development
+if (builder.Environment.IsDevelopment())
 {
-    options.SwaggerDoc("v1", new OpenApiInfo
+    builder.Services.AddSwaggerGen(options =>
     {
-        Title = "Missão API",
-        Version = "v1"
-    });
-
-    var securityScheme = new OpenApiSecurityScheme
-    {
-        Name = "Authorization",
-        Type = SecuritySchemeType.Http,
-        Scheme = "bearer",
-        BearerFormat = "JWT",
-        In = ParameterLocation.Header,
-        Description = "Insira o token no formato: Bearer {token}",
-        Reference = new OpenApiReference
+        options.SwaggerDoc("v1", new OpenApiInfo
         {
-            Type = ReferenceType.SecurityScheme,
-            Id = "Bearer"
-        }
-    };
+            Title = "Missão API",
+            Version = "v1"
+        });
 
-    options.AddSecurityDefinition("Bearer", securityScheme);
-    options.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
-        { securityScheme, Array.Empty<string>() }
+        var securityScheme = new OpenApiSecurityScheme
+        {
+            Name = "Authorization",
+            Type = SecuritySchemeType.Http,
+            Scheme = "bearer",
+            BearerFormat = "JWT",
+            In = ParameterLocation.Header,
+            Description = "Insira o token no formato: Bearer {token}",
+            Reference = new OpenApiReference
+            {
+                Type = ReferenceType.SecurityScheme,
+                Id = "Bearer"
+            }
+        };
+
+        options.AddSecurityDefinition("Bearer", securityScheme);
+        options.AddSecurityRequirement(new OpenApiSecurityRequirement
+        {
+            { securityScheme, Array.Empty<string>() }
+        });
     });
-});
+}
 
 // JWT Configuration
 var jwtKey = Environment.GetEnvironmentVariable("JWT_KEY")
@@ -120,12 +124,15 @@ var app = builder.Build();
 
 // --- PIPELINE DE MIDDLEWARE ---
 
-app.UseSwagger();
-app.UseSwaggerUI(c =>
+if (app.Environment.IsDevelopment())
 {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Missão API v1");
-    c.RoutePrefix = string.Empty;
-});
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Missão API v1");
+        c.RoutePrefix = "swagger";
+    });
+}
 
 app.UseStaticFiles();
 app.UseRouting();
@@ -178,22 +185,28 @@ using (var scope = app.Services.CreateScope())
         if (string.IsNullOrWhiteSpace(adminEmail) || string.IsNullOrWhiteSpace(adminPassword))
             throw new InvalidOperationException("Admin email ou password não definidos.");
 
-        if (!await db.Gestores.AnyAsync(g => g.Email == adminEmail))
+        var existingAdmin = await db.Gestores.FirstOrDefaultAsync(g => g.Email == adminEmail);
+        if (existingAdmin == null)
         {
             db.Gestores.Add(new Gestor
             {
                 Nome = "Administrador",
                 Email = adminEmail,
-                Password = adminPassword
+                Password = PasswordHasher.Hash(adminPassword)
             });
-
             await db.SaveChangesAsync();
             Console.WriteLine($"✓ Administrador criado: {adminEmail}");
         }
+        else if (!PasswordHasher.IsHashed(existingAdmin.Password))
+        {
+            // Migrar password em texto plano para hash
+            existingAdmin.Password = PasswordHasher.Hash(existingAdmin.Password);
+            await db.SaveChangesAsync();
+            Console.WriteLine($"✓ Password do administrador migrada para hash.");
+        }
 
         // Seed CanticoUmb
-       if (!await db.CanticosUmb.AnyAsync())
-
+        if (!await db.CanticosUmb.AnyAsync())
         {
             var topico = await db.TopicosUmb.FirstOrDefaultAsync();
             if (topico != null)

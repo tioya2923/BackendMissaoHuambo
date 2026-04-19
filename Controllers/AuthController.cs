@@ -7,6 +7,7 @@ using System.IdentityModel.Tokens.Jwt;
 
 using MissaoBackend.Data;
 using MissaoBackend.Models;
+using MissaoBackend.Services;
 
 namespace MissaoBackend.Controllers;
 
@@ -35,7 +36,7 @@ public class AuthController : ControllerBase
             return BadRequest("Email e password são obrigatórios.");
 
         var gestor = await _db.Gestores.FirstOrDefaultAsync(g => g.Email == req.Email);
-        if (gestor == null || gestor.Password != req.Password)
+        if (gestor == null || !PasswordHasher.Verify(req.Password, gestor.Password))
             return Unauthorized("Credenciais inválidas.");
 
         var jwtSection = _config.GetSection("Jwt");
