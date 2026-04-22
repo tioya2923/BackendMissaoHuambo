@@ -48,11 +48,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
-// Swagger apenas em Development
-if (builder.Environment.IsDevelopment())
+builder.Services.AddSwaggerGen(options =>
 {
-    builder.Services.AddSwaggerGen(options =>
-    {
         options.SwaggerDoc("v1", new OpenApiInfo
         {
             Title = "Missão API",
@@ -79,8 +76,7 @@ if (builder.Environment.IsDevelopment())
         {
             { securityScheme, Array.Empty<string>() }
         });
-    });
-}
+});
 
 // JWT Configuration
 var jwtKey = Environment.GetEnvironmentVariable("JWT_KEY")
@@ -116,15 +112,12 @@ var app = builder.Build();
 
 // --- PIPELINE DE MIDDLEWARE ---
 
-if (app.Environment.IsDevelopment())
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Missão API v1");
-        c.RoutePrefix = "swagger";
-    });
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Missão API v1");
+    c.RoutePrefix = "swagger";
+});
 
 app.UseStaticFiles();
 app.UseRouting();
