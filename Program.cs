@@ -112,15 +112,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
-// HTTPS (produção)
-if (builder.Environment.IsProduction())
-{
-    builder.WebHost.ConfigureKestrel((context, options) =>
-    {
-        options.Configure(context.Configuration.GetSection("Kestrel"));
-    });
-}
-
 var app = builder.Build();
 
 // --- PIPELINE DE MIDDLEWARE ---
@@ -143,6 +134,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapGet("/", () => Results.Ok(new { status = "ok", service = "MissaoBackend" }));
 
 // --- MIGRATIONS E SEED DATA ---
 using (var scope = app.Services.CreateScope())
