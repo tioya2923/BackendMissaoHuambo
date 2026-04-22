@@ -19,7 +19,7 @@ COPY --from=build /app/out ./
 # Porta padrão do ASP.NET Core
 
 # Forçar HTTPS (ajuste conforme ambiente de deploy)
-ENV ASPNETCORE_URLS=https://+:10000
+ENV ASPNETCORE_URLS=http://+:10000
 EXPOSE 10000
 
 # Comando de inicialização
