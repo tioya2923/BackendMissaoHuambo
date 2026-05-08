@@ -21,6 +21,7 @@ public class AppDbContext : DbContext
     public DbSet<CatecismoUbTopico> CatecismoUbTopicos => Set<CatecismoUbTopico>();
 
     public DbSet<Photo> Photos => Set<Photo>();
+    public DbSet<Utilizador> Utilizadores => Set<Utilizador>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -47,12 +48,14 @@ public class AppDbContext : DbContext
             .HasIndex(g => g.Email)
             .IsUnique();
 
+        modelBuilder.Entity<Utilizador>()
+            .HasIndex(u => u.Email)
+            .IsUnique();
+
         modelBuilder.Entity<CanticoUmb>()
-      .HasOne(c => c.Topico)
-      .WithMany(t => t.Canticos)
-      .HasForeignKey(c => c.TopicoId)
-      .OnDelete(DeleteBehavior.Restrict);
-
-
+            .HasOne(c => c.Topico)
+            .WithMany(t => t.Canticos)
+            .HasForeignKey(c => c.TopicoId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
