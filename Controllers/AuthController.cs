@@ -24,13 +24,13 @@ public class AuthController : ControllerBase
         _config = config;
     }
 
-    public record LoginRequest(string Email, string Password);
+    public record GestorLoginRequest(string Email, string Password);
 
     public record LoginResponse(string Token, string Nome, string Email);
 
     [HttpPost("login")]
     [Produces("application/json")]
-    public async Task<IActionResult> Login([FromBody] LoginRequest req)
+    public async Task<IActionResult> Login([FromBody] GestorLoginRequest req)
     {
         if (string.IsNullOrWhiteSpace(req.Email) || string.IsNullOrWhiteSpace(req.Password))
             return BadRequest("Email e password são obrigatórios.");
