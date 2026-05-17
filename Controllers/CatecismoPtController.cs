@@ -23,7 +23,7 @@ namespace MissaoBackend.Controllers
             var query = _context.CatecismosPt.AsQueryable();
             if (topicoId.HasValue)
                 query = query.Where(c => c.CatecismoPtTopicoId == topicoId);
-            return await query.ToListAsync();
+            return await query.OrderBy(c => c.Id).ToListAsync();
         }
 
         [HttpGet("{id}")]

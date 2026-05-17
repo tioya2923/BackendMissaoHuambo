@@ -44,6 +44,12 @@ public class AppDbContext : DbContext
             .HasIndex(t => t.Slug)
             .IsUnique();
 
+        modelBuilder.Entity<CatecismoPtTopico>()
+            .HasOne(t => t.Parent)
+            .WithMany(t => t.SubTopicos)
+            .HasForeignKey(t => t.ParentId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         modelBuilder.Entity<Gestor>()
             .HasIndex(g => g.Email)
             .IsUnique();

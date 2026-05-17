@@ -7,18 +7,25 @@ namespace MissaoBackend.Seeds;
 
 public static class CatecismoPtSeeder
 {
-    private const int TotalTopicos = 37;
+    // 2 tópicos raiz + 36 subtópicos do Compêndio = 38
+    private const int TotalTopicos = 38;
 
     public static async Task SeedAsync(AppDbContext db)
     {
         var count = await db.CatecismoPtTopicos.CountAsync();
         if (count >= TotalTopicos) return;
 
-        // Dados incompletos — limpar e re-inserir
+        // Dados incompletos — limpar e re-inserir respeitando FK (filhos antes de pais)
         if (count > 0)
         {
             Console.WriteLine($"→ Catecismo PT incompleto ({count}/{TotalTopicos} tópicos). A reseeder...");
             db.CatecismosPt.RemoveRange(db.CatecismosPt);
+            await db.SaveChangesAsync();
+
+            var subtopicos = await db.CatecismoPtTopicos.Where(t => t.ParentId != null).ToListAsync();
+            db.CatecismoPtTopicos.RemoveRange(subtopicos);
+            await db.SaveChangesAsync();
+
             db.CatecismoPtTopicos.RemoveRange(db.CatecismoPtTopicos);
             await db.SaveChangesAsync();
         }
@@ -28,6 +35,12 @@ public static class CatecismoPtSeeder
         foreach (var topico in topicos)
         {
             topico.Slug = SlugHelper.Slugify(topico.Titulo);
+            foreach (var sub in topico.SubTopicos)
+            {
+                sub.Slug = SlugHelper.Slugify(sub.Titulo);
+                foreach (var entrada in sub.CatecismosPt)
+                    entrada.Slug = SlugHelper.Slugify(entrada.Titulo);
+            }
             foreach (var entrada in topico.CatecismosPt)
                 entrada.Slug = SlugHelper.Slugify(entrada.Titulo);
 
@@ -35,11 +48,17 @@ public static class CatecismoPtSeeder
         }
 
         await db.SaveChangesAsync();
-        Console.WriteLine($"✓ Catecismo PT: {topicos.Count} tópicos inseridos.");
+        Console.WriteLine($"✓ Catecismo PT: {topicos.Count} tópicos raiz inseridos (total incluindo subtópicos: {TotalTopicos}).");
     }
 
     private static List<CatecismoPtTopico> GetTopicos() => new()
     {
+        new CatecismoPtTopico
+        {
+            Titulo = "Compêndio do Catecismo",
+            SubTopicos = new List<CatecismoPtTopico>
+            {
+
         // ─────────────────────────────────────────────────────────────────────
         // PRIMEIRA PARTE: A PROFISSÃO DA FÉ
         // ─────────────────────────────────────────────────────────────────────
@@ -909,6 +928,9 @@ public static class CatecismoPtSeeder
                 new() { Titulo = "598. O que significa o Ámen final?", Texto = "«Depois, acabada a oração, tu dizes: Ámen, corroborando com o Ámen, que significa \"Assim seja, que isso se faça\", tudo o que está contido na oração que Deus nos ensinou» (S. Cirilo de Jerusalém)." },
             }
         },
+
+            } // fim SubTopicos do Compêndio
+        }, // fim Compêndio do Catecismo
 
         // ─────────────────────────────────────────────────────────────────────
         // ORAÇÕES TRADICIONAIS CATÓLICAS

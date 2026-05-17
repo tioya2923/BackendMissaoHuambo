@@ -18,8 +18,17 @@ namespace MissaoBackend.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<CatecismoPtTopico>>> GetAll()
         {
-            // Removido Include para evitar referência circular/erro de serialização
-            return await _context.CatecismoPtTopicos.ToListAsync();
+            return await _context.CatecismoPtTopicos
+                .Where(t => t.ParentId == null)
+                .ToListAsync();
+        }
+
+        [HttpGet("{id}/subtopicos")]
+        public async Task<ActionResult<IEnumerable<CatecismoPtTopico>>> GetSubTopicos(int id)
+        {
+            return await _context.CatecismoPtTopicos
+                .Where(t => t.ParentId == id)
+                .ToListAsync();
         }
 
         [HttpGet("{id}")]
