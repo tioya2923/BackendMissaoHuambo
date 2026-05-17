@@ -20,6 +20,11 @@ public class AppDbContext : DbContext
     public DbSet<CatecismoPtTopico> CatecismoPtTopicos => Set<CatecismoPtTopico>();
     public DbSet<CatecismoUbTopico> CatecismoUbTopicos => Set<CatecismoUbTopico>();
 
+    public DbSet<TopicoLat> TopicosLat => Set<TopicoLat>();
+    public DbSet<CanticoLat> CanticosLat => Set<CanticoLat>();
+    public DbSet<CatecismoLatTopico> CatecismoLatTopicos => Set<CatecismoLatTopico>();
+    public DbSet<CatecismoLat> CatecismosLat => Set<CatecismoLat>();
+
     public DbSet<Photo> Photos => Set<Photo>();
     public DbSet<Utilizador> Utilizadores => Set<Utilizador>();
 
@@ -59,6 +64,20 @@ public class AppDbContext : DbContext
             .IsUnique();
 
         modelBuilder.Entity<CanticoUmb>()
+            .HasOne(c => c.Topico)
+            .WithMany(t => t.Canticos)
+            .HasForeignKey(c => c.TopicoId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<TopicoLat>()
+            .HasIndex(t => t.Slug)
+            .IsUnique();
+
+        modelBuilder.Entity<CanticoLat>()
+            .HasIndex(c => c.Slug)
+            .IsUnique();
+
+        modelBuilder.Entity<CanticoLat>()
             .HasOne(c => c.Topico)
             .WithMany(t => t.Canticos)
             .HasForeignKey(c => c.TopicoId)
