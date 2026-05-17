@@ -9,20 +9,103 @@ public static class CatecismoLatSeeder
 {
     public static async Task SeedAsync(AppDbContext db)
     {
-        if (await db.CatecismoLatTopicos.AnyAsync()) return;
-
-        var topicos = GetTopicos();
-        foreach (var t in topicos)
+        if (!await db.CatecismoLatTopicos.AnyAsync())
         {
-            t.Slug = SlugHelper.Slugify(t.Titulo);
-            foreach (var e in t.CatecismosLat)
-                e.Slug = SlugHelper.Slugify(e.Titulo);
+            var topicos = GetTopicos();
+            foreach (var t in topicos)
+            {
+                t.Slug = SlugHelper.Slugify(t.Titulo);
+                foreach (var e in t.CatecismosLat)
+                    e.Slug = SlugHelper.Slugify(e.Titulo);
+            }
+            db.CatecismoLatTopicos.AddRange(topicos);
+            await db.SaveChangesAsync();
+            Console.WriteLine($"✓ {topicos.Count} tópicos de catecismo Latim adicionados.");
         }
 
-        db.CatecismoLatTopicos.AddRange(topicos);
-        await db.SaveChangesAsync();
-        Console.WriteLine($"✓ {topicos.Count} tópicos de catecismo Latim adicionados.");
+        // Adicionar orações em falta ao tópico Preces Fundamentales
+        await AddMissingPrayersAsync(db);
     }
+
+    private static async Task AddMissingPrayersAsync(AppDbContext db)
+    {
+        var topico = await db.CatecismoLatTopicos
+            .FirstOrDefaultAsync(t => t.Titulo == "Preces Fundamentales");
+        if (topico == null) return;
+
+        var existingSlugs = (await db.CatecismosLat
+            .Where(e => e.CatecismoLatTopicoId == topico.Id)
+            .Select(e => e.Slug)
+            .ToListAsync()).ToHashSet();
+
+        var novos = GetPrecesAdicionais()
+            .Select(p => new { Data = p, Slug = SlugHelper.Slugify(p.Titulo) })
+            .Where(x => !existingSlugs.Contains(x.Slug))
+            .Select(x => new CatecismoLat
+            {
+                Titulo = x.Data.Titulo,
+                Slug = x.Slug,
+                Texto = x.Data.Texto,
+                CatecismoLatTopicoId = topico.Id,
+            })
+            .ToList();
+
+        if (novos.Count == 0) return;
+
+        db.CatecismosLat.AddRange(novos);
+        await db.SaveChangesAsync();
+        Console.WriteLine($"✓ {novos.Count} orações Latim adicionadas.");
+    }
+
+    private record OracaoData(string Titulo, string Texto);
+
+    private static List<OracaoData> GetPrecesAdicionais() =>
+    [
+        new("Signum Crucis",
+            "Per signum Crucis de inimícis nostris líbera nos Deus noster.\nIn nómine Patris, et Fílii, et Spíritus Sancti.\nAmen."),
+
+        new("Actus Contritionis",
+            "Deus meus, ex toto corde paénitet me ómnium meórum peccatórum,\neáque detéstor, qui peccándo, non solum poenas a te iuste statútas proméritus sum,\nsed praesértim quia offéndi te, summum bonum, ac dignum qui super ómnia diligáris.\nIdeo firmiter propóno, adiuvánte grátia tua,\nde cétero me non peccatúrum peccandíque occasiónes próximas fugitúrum.\nAmen."),
+
+        new("O Domina Mea",
+            "O Domina mea! O Mater mea!\nTibi me totum offero,\natque, ut me tibi probem devotum,\nconsecro tibi hodie oculos meos, aures meas, os meum, cor meum, plane me totum.\nQuoniam itaque tuus sum, o bona Mater,\nserva me, defende me ut rem ac possessionem tuam.\nAmen."),
+
+        new("Memorare",
+            "Memorare, o piisima Virgo Maria,\nnon esse auditum a saeculo,\nquemquam ad tua currentem praesidia,\ntua implorantem auxilia,\ntua petentem suffragia esse derelicta.\nNos tali animati confidentia ad te, Virgo Virginum, Mater, currimus;\nad te venimus; coram te gementes peccatores assistimus.\nNoli, Mater Verbi, verba nostra despicere,\nsed audi propitia et exaudi.\nAmen."),
+
+        new("Veni Sancte Spiritus",
+            "Veni Sancte Spíritus,\nreple tuórum corda fidélium,\net tu amóris in eis ignem accénde.\nEmítte Spíritum tuum et creabúntur.\nEt renovábis faciem terrae.\nOremus: Deus, qui corda fidélium\nSancti Spíritus illustratióne docuisti,\nda nobis in eódem Spíritu recta sápere,\net de ejus semper consolatióne gaudére.\nPer Christum Dóminum nostrum.\nAmen."),
+
+        new("Angele Dei",
+            "Angele Dei, qui custos es mei,\nme, tibi commissum pietate superna,\nhodie illúmina, custódi, rege et gubérna.\nAmen."),
+
+        new("Sancte Michael Archangele",
+            "Sancte Michael Archangele,\ndefende nos in praelio,\ncontra nequitias et insidias diaboli esto praesidium.\nImperet illi Deus, supplices deprecamur,\ntuque, Princeps militiae caelestis,\nsatanam aliosque spiritus malignos,\nqui ad perditionem animarum pervagantur in mundo,\ndivina virtute in infernum detrude.\nAmen."),
+
+        new("Domine, Non Sum Dignus",
+            "Domine, non sum dignus, ut intres sub tectum meum:\nsed tantum dic verbo, et sanabitur anima mea."),
+
+        new("Anima Christi",
+            "Anima Christi, sanctífica me.\nCorpus Christi, salva me.\nSanguis Christi, inebria me.\nAqua láteris Christi, lava me.\nPássio Christi, confórta me.\nO boné Iesu, exáudi me.\nIntra tua vulnera abscónde me.\nNe permíttas me separári a te.\nAb hoste maligno defende me.\nIn hora mortis meae voca me.\nEt iube me veníre ad te,\nut cum Sanctis tuis laudem te\nin saécula saeculórum.\nAmen."),
+
+        new("Oratio Fatimae",
+            "Domine Iesu, dimitte nobis debita nostra,\nsalva nos ab igne inferiori,\nperduc in caelum omnes animas,\npraesertim eas, quae misericordiae tuae maxime indigent."),
+
+        new("Requiem Aeternam",
+            "Requiem aeternam dona eis, Domine.\nEt lux perpetua luceat eis.\nFidelium animae, per misericordiam Dei,\nrequiescant in pace.\nAmen."),
+
+        new("Actus Fidei",
+            "Dómine Deus, firma fide credo et confiteor\nómnia et síngula quae Sancta Ecclésia Cathólica propónit,\nquia tu, Deus, ea ómnia revelásti,\nqui es aetérna véritas et sapiéntia quae nec fállere nec falli potest.\nIn hac fide vívere et mori státuo.\nAmen."),
+
+        new("Actus Spei",
+            "Dómine Deus, spero per grátiam tuam\nremissiónem ómnium peccatórum,\net post hanc vitam aetérnam felicitátem me esse consecutúrum:\nquia tu promisísti, qui es infiníte potens, fidélis, benígnus, et miséricors.\nIn hac spe vívere et mori státuo.\nAmen."),
+
+        new("Actus Caritatis",
+            "Dómine Deus, amo te super ómnia\net próximum meum propter te,\nquia tu es summum, infinítum, et perfectíssimum bonum,\nomni dilectióne dignum.\nIn hac caritáte vívere et mori státuo.\nAmen."),
+
+        new("Vade Retro Satana",
+            "Crux Sacra Sit Mihi Lux.\nNon Draco Sit Mihi Dux.\nVade Retro Sátana,\nNunquam Suade Mihi Vana.\nSunt Mala Quae Libas,\nIpse Venena Bibas."),
+    ];
 
     private static List<CatecismoLatTopico> GetTopicos() =>
     [
