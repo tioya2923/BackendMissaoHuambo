@@ -43,6 +43,11 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     var cs = Environment.GetEnvironmentVariable("DB_CONNECTION_STRING")
         ?? builder.Configuration.GetConnectionString("DefaultConnection");
 
+    if (string.IsNullOrWhiteSpace(cs) || cs == "USE_ENVIRONMENT_VARIABLE")
+        throw new InvalidOperationException(
+            "DB_CONNECTION_STRING não está configurada. " +
+            "Define a variável de ambiente no Render (ou no ficheiro .env local).");
+
     options.UseMySql(cs, new MySqlServerVersion(new Version(8, 0, 34)));
 });
 
@@ -87,8 +92,10 @@ var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER")
 var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE")
     ?? builder.Configuration["Jwt:Audience"];
 
-if (string.IsNullOrWhiteSpace(jwtKey))
-    throw new InvalidOperationException("Jwt:Key is missing.");
+if (string.IsNullOrWhiteSpace(jwtKey) || jwtKey == "USE_ENVIRONMENT_VARIABLE")
+    throw new InvalidOperationException(
+        "JWT_KEY não está configurada. " +
+        "Define a variável de ambiente no Render (ou no ficheiro .env local).");
 
 var key = Encoding.UTF8.GetBytes(jwtKey);
 
