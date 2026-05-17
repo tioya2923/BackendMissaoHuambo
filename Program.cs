@@ -153,6 +153,9 @@ using (var scope = app.Services.CreateScope())
         // Seed Catecismo PT
         await CatecismoPtSeeder.SeedAsync(db);
 
+        // Seed Cânticos PT
+        await CanticoPtSeeder.SeedAsync(db);
+
         // Seed Tópicos Umbundu
         if (!await db.TopicosUmb.AnyAsync())
         {
