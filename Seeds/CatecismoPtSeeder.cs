@@ -7,8 +7,8 @@ namespace MissaoBackend.Seeds;
 
 public static class CatecismoPtSeeder
 {
-    // 2 tópicos raiz + 36 subtópicos do Compêndio = 38
-    private const int TotalTopicos = 38;
+    // 2 tópicos raiz + 38 subtópicos do Compêndio = 40
+    private const int TotalTopicos = 40;
 
     public static async Task SeedAsync(AppDbContext db)
     {
@@ -300,6 +300,62 @@ public static class CatecismoPtSeeder
                 new() { Titulo = "190. Como participam na função profética?", Texto = "Acolhendo na fé a Palavra de Cristo e anunciando-a ao mundo com testemunho." },
                 new() { Titulo = "191. Como participam na função real?", Texto = "Tendo recebido poder de vencer o pecado mediante abnegação e santidade de vida." },
                 new() { Titulo = "192. O que é a vida consagrada?", Texto = "Estado de vida reconhecido pela Igreja, resposta livre a chamamento particular." },
+                new() { Titulo = "193. O que é a Imaculada Conceição?", Texto = "Maria foi preservada de qualquer mácula do pecado original desde o primeiro instante da sua conceição, por privilégio singular, em razão dos méritos de Jesus Cristo. Proclamada dogma pelo Papa Pio IX em 1854." },
+                new() { Titulo = "194. Como cooperou Maria no plano divino da salvação?", Texto = "Pela sua fé e obediência livre, cooperou em toda a obra salvífica: concebeu, gerou e amamentou Cristo; apresentou-O ao Pai no Templo; sofreu com o Filho na Cruz; rogou com os Apóstolos pelo dom do Espírito Santo no Cenáculo." },
+                new() { Titulo = "195. Em que sentido Maria é «Mãe de Deus»?", Texto = "Maria é verdadeiramente Mãe de Deus (Theotokos) porque é mãe do Filho eterno de Deus que Se fez homem. O Concílio de Éfeso (431) definiu solenemente este título." },
+                new() { Titulo = "196. O que significa a virgindade perpétua de Maria?", Texto = "Maria concebeu o Filho de Deus por obra do Espírito Santo sem intervenção de varão; deu à luz conservando a sua virgindade; permaneceu virgem para sempre. Esta virgindade manifesta o dom total de si mesma ao serviço de Deus." },
+                new() { Titulo = "197. Qual o significado da Assunção de Maria?", Texto = "Terminado o curso da sua vida terrena, a Virgem Maria foi assunta em corpo e alma à glória do céu, antecipando a ressurreição gloriosa de todos os membros da Igreja." },
+                new() { Titulo = "198. Qual o papel de Maria na Igreja?", Texto = "Maria é Mãe da Igreja. Exerce do céu uma acção maternal contínua, intercedendo pelos seus filhos e cooperando para que nasçam e cresçam para a vida divina." },
+                new() { Titulo = "199. Como é que a Igreja venera Maria?", Texto = "Com culto singular de hiperdúlia, diverso do de adoração (latria) prestado a Deus. A Igreja venera-a com títulos de Advogada, Auxiliadora e Medianeira, sem que isso diminua a única mediação de Cristo." },
+            }
+        },
+
+        new CatecismoPtTopico
+        {
+            Titulo = "A Comunhão dos Santos, o Perdão dos Pecados, a Ressurreição e a Vida Eterna",
+            CatecismosPt = new List<CatecismoPt>
+            {
+                new() { Titulo = "200. O que é a «comunhão dos santos»?", Texto = "A comunhão entre todos os membros da Igreja — peregrinos na terra, almas em purificação e bem-aventurados no céu — e a partilha dos bens espirituais: fé, sacramentos, carismas e caridade." },
+                new() { Titulo = "201. Em que consiste o perdão dos pecados?", Texto = "Cristo confiou à Igreja, pelos Apóstolos, o poder de perdoar os pecados. Realiza-se sobretudo pelos sacramentos do Baptismo e da Penitência e Reconciliação." },
+                new() { Titulo = "202. O que acontece ao homem depois da morte?", Texto = "A alma separa-se do corpo e é submetida ao juízo particular: conforme o estado da alma, é encaminhada para a purificação, para a bem-aventurança do céu ou para a condenação eterna." },
+                new() { Titulo = "203. O que é o purgatório?", Texto = "Estado de purificação final após a morte, para aqueles que morreram em graça de Deus mas não estão suficientemente purificados para entrar no céu. A Igreja recomenda orações, esmolas e indulgências pelas almas do purgatório." },
+                new() { Titulo = "204. O que é o inferno?", Texto = "Estado de separação eterna de Deus, para quem morre em pecado mortal recusando voluntariamente a misericórdia de Deus. A sua pena principal é a separação eterna de Deus, de quem provém toda a alegria." },
+                new() { Titulo = "205. O que é o céu?", Texto = "Vida de bem-aventurança suprema e definitiva em comunhão com a Santíssima Trindade, com a Virgem Maria, os anjos e os santos. Os eleitos contemplam Deus face a face e partilham a vida divina." },
+                new() { Titulo = "206. O que é o Juízo Final?", Texto = "No fim dos tempos Cristo voltará em glória para julgar os vivos e os mortos. No Juízo Final será manifestado o sentido último da obra de Deus, de cada acção humana e da história inteira." },
+                new() { Titulo = "207. O que revela o Juízo Final?", Texto = "A justiça divina triunfa sobre todas as injustiças humanas e o amor de Deus sobre a morte. Revela que a misericórdia de Deus foi maior do que o pecado e que o destino eterno de cada pessoa foi confirmado pelas suas obras." },
+                new() { Titulo = "208. Quando virá o Juízo Final?", Texto = "Virá ao fim dos tempos, num dia e hora conhecidos só por Deus Pai. O anúncio do Juízo Final é apelo à conversão enquanto Deus oferece graça e misericórdia." },
+                new() { Titulo = "209. Que acontecerá ao universo no fim dos tempos?", Texto = "Com a vinda do Juízo Final o universo será renovado. A Escritura descreve esta renovação como «novos céus e nova terra» (Ap 21,1), pátria definitiva da humanidade glorificada com Cristo." },
+                new() { Titulo = "210. O que significa crer na «ressurreição da carne»?", Texto = "Crer que o estado definitivo do homem inclui também o corpo: Deus restaurará à vida os nossos corpos mortais, reunindo-os às nossas almas, pelo poder da ressurreição de Jesus Cristo." },
+                new() { Titulo = "211. Em que estado ressuscitará o corpo?", Texto = "O corpo ressuscitará transformado, glorioso e incorruptível, à imagem do corpo ressuscitado de Cristo. Não estará sujeito às leis do espaço e do tempo, mas será um verdadeiro corpo espiritual." },
+                new() { Titulo = "212. O que é a «vida eterna»?", Texto = "É a vida em plenitude com Deus para os que morreram em estado de graça. Supera toda a compreensão humana: «o que olho não viu, nem ouvido ouviu, nem ao coração do homem subiu» (1 Cor 2,9)." },
+                new() { Titulo = "213. O que significa o «Ámen» final do Credo?", Texto = "A palavra hebraica «Ámen» — «Assim seja», «É verdadeiro» — exprime a fé firme, a confiança filial e o abandono total à verdade que Deus revelou e que professamos no Credo." },
+                new() { Titulo = "214. Qual a diferença entre o juízo particular e o Juízo Universal?", Texto = "O juízo particular ocorre imediatamente após a morte de cada pessoa. O Juízo Universal acontecerá no fim dos tempos e será o julgamento de toda a humanidade perante Cristo glorioso." },
+                new() { Titulo = "215. O que aguarda quem morreu em graça mas sem plena purificação?", Texto = "O purgatório, estado de purificação final antes da entrada na glória, onde a alma se purifica do apego ao pecado. Isso não contraria o amor de Deus, antes confirma-o." },
+                new() { Titulo = "216. Como se manifesta a comunhão entre a Igreja terrena e a Igreja celeste?", Texto = "Pela oração: os membros da Igreja terrena rezam pelos que estão em purificação, e os santos do céu intercedem pelos peregrinos na terra, numa comunhão de amor e graça." },
+                new() { Titulo = "217. Qual o fundamento da esperança cristã na ressurreição?", Texto = "A ressurreição de Cristo, «primícias dos que dormem» (1 Cor 15,20). A nossa fé na ressurreição é inseparável da fé na ressurreição de Cristo, sem a qual a fé seria vã." },
+            }
+        },
+
+        new CatecismoPtTopico
+        {
+            Titulo = "A Liturgia — Obra da Santíssima Trindade",
+            CatecismosPt = new List<CatecismoPt>
+            {
+                new() { Titulo = "218. O que é a liturgia?", Texto = "Participação do povo de Deus na «obra de Deus». É o exercício da função sacerdotal de Cristo: santificação dos homens e culto público a Deus, realizado pelo Corpo Místico de Cristo, Cabeça e membros." },
+                new() { Titulo = "219. Qual é o lugar da liturgia na missão da Igreja?", Texto = "A liturgia é o cume para o qual se dirige toda a actividade da Igreja e a fonte de onde promana toda a sua força. Por ela a Igreja celebra o mistério de Cristo e presta culto a Deus." },
+                new() { Titulo = "220. Qual é o papel do Pai na liturgia?", Texto = "O Pai é a fonte e o fim de toda a liturgia cristã. A sua bênção é ao mesmo tempo palavra e dom. A Igreja responde adorando, louvando e rendendo graças ao Pai por Cristo no Espírito Santo." },
+                new() { Titulo = "221. Qual é o papel de Cristo na liturgia?", Texto = "Cristo é o Sumo Sacerdote que celebra a liturgia. Está presente nas celebrações: na pessoa do ministro, nas Escrituras proclamadas, nos sacramentos, na oração da Igreja e sobretudo na Eucaristia." },
+                new() { Titulo = "222. Qual é o papel do Espírito Santo na liturgia?", Texto = "O Espírito prepara a assembleia para o encontro com Cristo; faz recordar e actualiza a obra de Cristo; une a Igreja com a vida e missão de Cristo; e é o princípio de toda a santificação." },
+                new() { Titulo = "223. O que é a «economia sacramental»?", Texto = "É a comunicação dos frutos do Mistério Pascal de Cristo através dos sacramentos. Nesta economia, o passado histórico da salvação torna-se presente e eficaz nos sinais sacramentais da Igreja." },
+                new() { Titulo = "224. Quantos sacramentos instituiu Cristo?", Texto = "Sete: Baptismo, Confirmação, Eucaristia, Penitência e Reconciliação, Unção dos Enfermos, Ordem Sacerdotal e Matrimônio. Cada um é sinal eficaz da graça e instrumento de santificação e edificação da Igreja." },
+                new() { Titulo = "225. Quais são os sacramentos de iniciação cristã?", Texto = "O Baptismo, a Confirmação e a Eucaristia, que lançam os fundamentos de toda a vida cristã: a participação na natureza divina, recebida no Baptismo, é fortalecida pela Confirmação e nutrida pela Eucaristia." },
+                new() { Titulo = "226. Quais são os sacramentos de cura?", Texto = "A Penitência e Reconciliação e a Unção dos Enfermos, pelos quais Cristo continua a sua obra de cura e de salvação dos membros do seu Corpo." },
+                new() { Titulo = "227. Quais são os sacramentos ao serviço da comunhão?", Texto = "A Ordem Sacerdotal e o Matrimônio, ordenados à salvação dos outros e à edificação do Povo de Deus." },
+                new() { Titulo = "228. Qual é a relação entre os sacramentos e a Igreja?", Texto = "Os sacramentos são «da Igreja» em duplo sentido: por ela — pois ela é sacramento de Cristo — e para ela — pois constroem a Igreja. São eficazes porque Cristo actua neles." },
+                new() { Titulo = "229. Em que consiste a eficácia dos sacramentos?", Texto = "Os sacramentos agem ex opere operato, ou seja, produzem a graça que significam pela força de Cristo, independentemente da santidade do ministro. Mas os frutos dependem também das disposições de quem os recebe." },
+                new() { Titulo = "230. O que é o «carácter» sacramental?", Texto = "A marca espiritual indelével impressa no Baptismo, na Confirmação e na Ordem Sacerdotal, que configura o cristão a Cristo e à Igreja. Não pode ser repetida nem apagada." },
+                new() { Titulo = "231. O que é a graça sacramental?", Texto = "É a graça do Espírito Santo, dada por Cristo e própria de cada sacramento. Cada um confere a graça específica para viver o mistério que celebra e para crescer na caridade." },
+                new() { Titulo = "232. Qual o nexo entre os sacramentos e a fé?", Texto = "Os sacramentos pressupõem a fé e ao mesmo tempo a nutrem, fortalecem e exprimem. Por isso são chamados «sacramentos da fé». A celebração sacramental exige e alimenta a adesão pessoal de fé do crente." },
             }
         },
 
