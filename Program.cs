@@ -8,6 +8,7 @@ using MissaoBackend.Data;
 using MissaoBackend.Utils;
 using MissaoBackend.Models;
 using MissaoBackend.Services;
+using MissaoBackend.Seeds;
 
 // Carrega variáveis do arquivo .env automaticamente
 Env.Load();
@@ -141,6 +142,9 @@ using (var scope = app.Services.CreateScope())
 
         if (await db.Database.CanConnectAsync())
             Console.WriteLine("✓ Ligação à base de dados bem-sucedida!");
+
+        // Seed Catecismo PT
+        await CatecismoPtSeeder.SeedAsync(db);
 
         // Seed Tópicos Umbundu
         if (!await db.TopicosUmb.AnyAsync())

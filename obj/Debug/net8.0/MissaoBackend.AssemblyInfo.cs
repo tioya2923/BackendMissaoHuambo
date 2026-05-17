@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MissaoBackend")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0d1f41875040b1ec18ef110b2f66b59bee476e05")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+219b0443d4fd185ecc3be56fcf4cb3f551c9066d")]
 [assembly: System.Reflection.AssemblyProductAttribute("MissaoBackend")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MissaoBackend")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
