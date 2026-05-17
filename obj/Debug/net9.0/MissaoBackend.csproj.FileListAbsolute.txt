@@ -1,9 +1,0 @@
-C:\Projects\missao\MissaoBackend\obj\Debug\net9.0\MissaoBackend.csproj.AssemblyReference.cache
-C:\Projects\missao\MissaoBackend\obj\Debug\net9.0\rpswa.dswa.cache.json
-C:\Projects\missao\MissaoBackend\obj\Debug\net9.0\MissaoBackend.GeneratedMSBuildEditorConfig.editorconfig
-C:\Projects\missao\MissaoBackend\obj\Debug\net9.0\MissaoBackend.AssemblyInfoInputs.cache
-C:\Projects\missao\MissaoBackend\obj\Debug\net9.0\MissaoBackend.AssemblyInfo.cs
-C:\Projects\missao\MissaoBackend\obj\Debug\net9.0\MissaoBackend.csproj.CoreCompileInputs.cache
-C:\Projects\missao\MissaoBackend\obj\Debug\net9.0\MissaoBackend.MvcApplicationPartsAssemblyInfo.cs
-C:\Projects\missao\MissaoBackend\obj\Debug\net9.0\MissaoBackend.MvcApplicationPartsAssemblyInfo.cache
-C:\Projects\missao\MissaoBackend\obj\Debug\net9.0\MissaoBackend.sourcelink.json

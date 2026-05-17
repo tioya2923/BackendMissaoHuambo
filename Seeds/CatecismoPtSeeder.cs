@@ -7,9 +7,21 @@ namespace MissaoBackend.Seeds;
 
 public static class CatecismoPtSeeder
 {
+    private const int TotalTopicos = 36;
+
     public static async Task SeedAsync(AppDbContext db)
     {
-        if (await db.CatecismoPtTopicos.AnyAsync()) return;
+        var count = await db.CatecismoPtTopicos.CountAsync();
+        if (count >= TotalTopicos) return;
+
+        // Dados incompletos — limpar e re-inserir
+        if (count > 0)
+        {
+            Console.WriteLine($"→ Catecismo PT incompleto ({count}/{TotalTopicos} tópicos). A reseeder...");
+            db.CatecismosPt.RemoveRange(db.CatecismosPt);
+            db.CatecismoPtTopicos.RemoveRange(db.CatecismoPtTopicos);
+            await db.SaveChangesAsync();
+        }
 
         var topicos = GetTopicos();
 

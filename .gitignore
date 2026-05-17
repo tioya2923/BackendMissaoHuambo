@@ -2,3 +2,18 @@
 .env
 .env.*
 .env.example
+
+# Build artifacts
+bin/
+obj/
+
+# Visual Studio
+*.user
+.vs/
+*.suo
+*.userosscache
+*.sln.docstates
+
+# JetBrains Rider
+.idea/
+*.sln.iml
