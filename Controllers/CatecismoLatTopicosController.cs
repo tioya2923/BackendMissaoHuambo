@@ -28,7 +28,7 @@ public class CatecismoLatTopicosController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize]
+    [Authorize(Policy = "Gestor")]
     public async Task<ActionResult<CatecismoLatTopico>> Create(CatecismoLatTopico input)
     {
         input.Slug = SlugHelper.Slugify(input.Titulo);
@@ -38,7 +38,7 @@ public class CatecismoLatTopicosController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [Authorize]
+    [Authorize(Policy = "Gestor")]
     public async Task<IActionResult> Update(int id, CatecismoLatTopico input)
     {
         var existing = await _context.CatecismoLatTopicos.FindAsync(id);
@@ -52,7 +52,7 @@ public class CatecismoLatTopicosController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize]
+    [Authorize(Policy = "Gestor")]
     public async Task<IActionResult> Delete(int id)
     {
         var existing = await _context.CatecismoLatTopicos.FindAsync(id);

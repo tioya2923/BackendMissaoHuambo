@@ -120,7 +120,7 @@ public class UmbunduCanticosController : ControllerBase
     // CRIAR
     // ============================
     [HttpPost]
-    [Authorize]
+    [Authorize(Policy = "Gestor")]
     public async Task<ActionResult<CanticoUmb>> Create(CanticoUmb input)
     {
         input.Slug = SlugHelper.Slugify(input.Titulo);
@@ -134,7 +134,7 @@ public class UmbunduCanticosController : ControllerBase
     // ATUALIZAR
     // ============================
     [HttpPut("{id:int}")]
-    [Authorize]
+    [Authorize(Policy = "Gestor")]
     public async Task<IActionResult> Update(int id, CanticoUmb input)
     {
         var existing = await _db.CanticosUmb.FindAsync(id);
@@ -154,7 +154,7 @@ public class UmbunduCanticosController : ControllerBase
     // APAGAR
     // ============================
     [HttpDelete("{id:int}")]
-    [Authorize]
+    [Authorize(Policy = "Gestor")]
     public async Task<IActionResult> Delete(int id)
     {
         var existing = await _db.CanticosUmb.FindAsync(id);
@@ -171,7 +171,7 @@ public class UmbunduCanticosController : ControllerBase
     // UPLOAD PDF
     // ============================
     [HttpPost("{id:int}/upload-pdf")]
-    [Authorize]
+    [Authorize(Policy = "Gestor")]
     public async Task<IActionResult> UploadPdf(int id, IFormFile file)
     {
         var cantico = await _db.CanticosUmb.FindAsync(id);

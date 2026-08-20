@@ -32,7 +32,7 @@ public class CatecismoLatController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize]
+    [Authorize(Policy = "Gestor")]
     public async Task<ActionResult<CatecismoLat>> Create(CatecismoLat input)
     {
         _context.CatecismosLat.Add(input);
@@ -41,7 +41,7 @@ public class CatecismoLatController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    [Authorize]
+    [Authorize(Policy = "Gestor")]
     public async Task<IActionResult> Update(int id, CatecismoLat input)
     {
         var existing = await _context.CatecismosLat.FindAsync(id);
@@ -57,7 +57,7 @@ public class CatecismoLatController : ControllerBase
     }
 
     [HttpDelete("{id}")]
-    [Authorize]
+    [Authorize(Policy = "Gestor")]
     public async Task<IActionResult> Delete(int id)
     {
         var item = await _context.CatecismosLat.FindAsync(id);

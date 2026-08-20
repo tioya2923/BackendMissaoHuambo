@@ -60,7 +60,7 @@ public class CanticosLatController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize]
+    [Authorize(Policy = "Gestor")]
     public async Task<ActionResult<CanticoLat>> Create(CanticoLat input)
     {
         input.Slug = SlugHelper.Slugify(input.Titulo);
@@ -70,7 +70,7 @@ public class CanticosLatController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [Authorize]
+    [Authorize(Policy = "Gestor")]
     public async Task<IActionResult> Update(int id, CanticoLat input)
     {
         var existing = await _db.CanticosLat.FindAsync(id);
@@ -84,7 +84,7 @@ public class CanticosLatController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize]
+    [Authorize(Policy = "Gestor")]
     public async Task<IActionResult> Delete(int id)
     {
         var existing = await _db.CanticosLat.FindAsync(id);

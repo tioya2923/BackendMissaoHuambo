@@ -27,7 +27,7 @@ namespace MissaoBackend.Controllers
 
         // Lista plana com todos os tópicos e subtópicos — usada pelo painel de administração
         [HttpGet("todos")]
-        [Authorize]
+        [Authorize(Policy = "Gestor")]
         public async Task<ActionResult<IEnumerable<CatecismoPtTopico>>> GetTodosPlano()
         {
             return await _context.CatecismoPtTopicos
@@ -61,7 +61,7 @@ namespace MissaoBackend.Controllers
         }
 
         [HttpPost]
-        [Authorize]
+        [Authorize(Policy = "Gestor")]
         public async Task<ActionResult<CatecismoPtTopico>> Create(CatecismoPtTopico input)
         {
             input.Slug = SlugHelper.Slugify(input.Titulo);
@@ -71,7 +71,7 @@ namespace MissaoBackend.Controllers
         }
 
         [HttpPut("{id:int}")]
-        [Authorize]
+        [Authorize(Policy = "Gestor")]
         public async Task<IActionResult> Update(int id, CatecismoPtTopico input)
         {
             var existing = await _context.CatecismoPtTopicos.FindAsync(id);
@@ -89,7 +89,7 @@ namespace MissaoBackend.Controllers
         }
 
         [HttpDelete("{id:int}")]
-        [Authorize]
+        [Authorize(Policy = "Gestor")]
         public async Task<IActionResult> Delete(int id)
         {
             var existing = await _context.CatecismoPtTopicos.FindAsync(id);

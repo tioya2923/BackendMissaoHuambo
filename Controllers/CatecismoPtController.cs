@@ -35,7 +35,7 @@ namespace MissaoBackend.Controllers
         }
 
         [HttpPost]
-        [Authorize]
+        [Authorize(Policy = "Gestor")]
         public async Task<ActionResult<CatecismoPt>> Create(CatecismoPt catecismo)
         {
             catecismo.Slug = SlugHelper.Slugify(catecismo.Titulo);
@@ -45,7 +45,7 @@ namespace MissaoBackend.Controllers
         }
 
         [HttpPut("{id}")]
-        [Authorize]
+        [Authorize(Policy = "Gestor")]
         public async Task<IActionResult> Update(int id, CatecismoPt catecismo)
         {
             if (id != catecismo.Id) return BadRequest();
@@ -56,7 +56,7 @@ namespace MissaoBackend.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize]
+        [Authorize(Policy = "Gestor")]
         public async Task<IActionResult> Delete(int id)
         {
             var item = await _context.CatecismosPt.FindAsync(id);

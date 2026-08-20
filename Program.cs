@@ -117,7 +117,13 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    // Administrador único da plataforma — gere o conteúdo religioso e modera as lojas
+    options.AddPolicy("Gestor", p => p.RequireClaim("tipo", "gestor"));
+    // Conta de loja parceira — gere os seus próprios produtos e encomendas
+    options.AddPolicy("Loja", p => p.RequireClaim("tipo", "loja"));
+});
 
 var app = builder.Build();
 

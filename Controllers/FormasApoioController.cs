@@ -33,7 +33,7 @@ namespace MissaoBackend.Controllers
 
         // GET /api/formasapoio/admin — protegido, todas (incluindo inativas), para o painel de administração
         [HttpGet("admin")]
-        [Authorize]
+        [Authorize(Policy = "Gestor")]
         public async Task<ActionResult<IEnumerable<FormaApoio>>> GetTodas()
         {
             var formas = await _db.FormasApoio
@@ -46,7 +46,7 @@ namespace MissaoBackend.Controllers
         }
 
         [HttpPost]
-        [Authorize]
+        [Authorize(Policy = "Gestor")]
         public async Task<ActionResult<FormaApoio>> Create(FormaApoio input)
         {
             if (string.IsNullOrWhiteSpace(input.Label) || string.IsNullOrWhiteSpace(input.Valor))
@@ -68,7 +68,7 @@ namespace MissaoBackend.Controllers
         }
 
         [HttpPut("{id:int}")]
-        [Authorize]
+        [Authorize(Policy = "Gestor")]
         public async Task<IActionResult> Update(int id, FormaApoio input)
         {
             var existing = await _db.FormasApoio.FindAsync(id);
@@ -88,7 +88,7 @@ namespace MissaoBackend.Controllers
         }
 
         [HttpDelete("{id:int}")]
-        [Authorize]
+        [Authorize(Policy = "Gestor")]
         public async Task<IActionResult> Delete(int id)
         {
             var existing = await _db.FormasApoio.FindAsync(id);

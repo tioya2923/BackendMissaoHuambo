@@ -29,7 +29,7 @@ public class TopicosController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize]
+    [Authorize(Policy = "Gestor")]
     public async Task<ActionResult<Topico>> Create(Topico input)
     {
         input.Slug = SlugHelper.Slugify(input.Nome);
@@ -40,7 +40,7 @@ public class TopicosController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [Authorize]
+    [Authorize(Policy = "Gestor")]
     public async Task<IActionResult> Update(int id, Topico input)
     {
         var existing = await _db.Topicos.FindAsync(id);
@@ -54,7 +54,7 @@ public class TopicosController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize]
+    [Authorize(Policy = "Gestor")]
     public async Task<IActionResult> Delete(int id)
     {
         var existing = await _db.Topicos.FindAsync(id);

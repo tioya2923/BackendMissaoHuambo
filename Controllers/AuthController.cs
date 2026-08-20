@@ -1,12 +1,9 @@
 using System.Security.Claims;
-using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 
 using MissaoBackend.Data;
-using MissaoBackend.Models;
 using MissaoBackend.Services;
 
 namespace MissaoBackend.Controllers;
@@ -39,36 +36,22 @@ public class AuthController : ControllerBase
         if (gestor == null || !PasswordHasher.Verify(req.Password, gestor.Password))
             return Unauthorized("Credenciais inválidas.");
 
-        var jwtSection = _config.GetSection("Jwt");
-        var jwtKey = Environment.GetEnvironmentVariable("JWT_KEY") ?? jwtSection["Key"];
-        var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? jwtSection["Issuer"];
-        var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? jwtSection["Audience"];
-
-        if (string.IsNullOrWhiteSpace(jwtKey) || jwtKey == "USE_ENVIRONMENT_VARIABLE")
-            return StatusCode(500, "JWT_KEY não está configurada no servidor.");
-
-        var key = Encoding.UTF8.GetBytes(jwtKey);
-
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub, gestor.Email),
-            new Claim("gestorId", gestor.Id.ToString())
+            new Claim("gestorId", gestor.Id.ToString()),
+            new Claim("tipo", "gestor"),
         };
 
-        var creds = new SigningCredentials(
-            new SymmetricSecurityKey(key),
-            SecurityAlgorithms.HmacSha256
-        );
-
-        var token = new JwtSecurityToken(
-            issuer: jwtIssuer,
-            audience: jwtAudience,
-            claims: claims,
-            expires: DateTime.UtcNow.AddHours(4),
-            signingCredentials: creds
-        );
-
-        var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
+        string tokenString;
+        try
+        {
+            tokenString = JwtTokenService.Criar(_config, claims, TimeSpan.FromHours(4));
+        }
+        catch (JwtTokenService.JwtNaoConfiguradoException ex)
+        {
+            return StatusCode(500, ex.Message);
+        }
 
         return Ok(new LoginResponse(tokenString, gestor.Nome, gestor.Email));
     }

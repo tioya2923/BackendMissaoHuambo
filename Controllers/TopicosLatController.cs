@@ -20,7 +20,7 @@ public class TopicosLatController : ControllerBase
         => await _db.TopicosLat.OrderBy(t => t.Nome).ToListAsync();
 
     [HttpPost]
-    [Authorize]
+    [Authorize(Policy = "Gestor")]
     public async Task<ActionResult<TopicoLat>> Create(TopicoLat input)
     {
         input.Slug = SlugHelper.Slugify(input.Nome);
@@ -30,7 +30,7 @@ public class TopicosLatController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [Authorize]
+    [Authorize(Policy = "Gestor")]
     public async Task<IActionResult> Update(int id, TopicoLat input)
     {
         var existing = await _db.TopicosLat.FindAsync(id);
@@ -44,7 +44,7 @@ public class TopicosLatController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize]
+    [Authorize(Policy = "Gestor")]
     public async Task<IActionResult> Delete(int id)
     {
         var existing = await _db.TopicosLat.FindAsync(id);

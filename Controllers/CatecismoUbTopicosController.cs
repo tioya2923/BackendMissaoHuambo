@@ -17,7 +17,7 @@ namespace MissaoBackend.Controllers
         }
 
         [HttpPost]
-        [Authorize]
+        [Authorize(Policy = "Gestor")]
         public async Task<ActionResult<CatecismoUbTopico>> Create(CatecismoUbTopico input)
         {
             input.Slug = MissaoBackend.Utils.SlugHelper.Slugify(input.Titulo);
@@ -28,7 +28,7 @@ namespace MissaoBackend.Controllers
 
         // Permitir POST também em /api/CatecismoUbTopicos/topicos
         [HttpPost("topicos")]
-        [Authorize]
+        [Authorize(Policy = "Gestor")]
         public async Task<ActionResult<CatecismoUbTopico>> CreateTopico(CatecismoUbTopico input)
         {
             input.Slug = MissaoBackend.Utils.SlugHelper.Slugify(input.Titulo);
@@ -38,7 +38,7 @@ namespace MissaoBackend.Controllers
         }
 
         [HttpPut("{id:int}")]
-        [Authorize]
+        [Authorize(Policy = "Gestor")]
         public async Task<IActionResult> Update(int id, CatecismoUbTopico input)
         {
             var existing = await _context.CatecismoUbTopicos.FindAsync(id);
@@ -52,7 +52,7 @@ namespace MissaoBackend.Controllers
         }
 
         [HttpDelete("{id:int}")]
-        [Authorize]
+        [Authorize(Policy = "Gestor")]
         public async Task<IActionResult> Delete(int id)
         {
             var existing = await _context.CatecismoUbTopicos.FindAsync(id);

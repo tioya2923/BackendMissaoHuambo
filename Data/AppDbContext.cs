@@ -32,6 +32,8 @@ public class AppDbContext : DbContext
     public DbSet<Produto> Produtos => Set<Produto>();
     public DbSet<Encomenda> Encomendas => Set<Encomenda>();
     public DbSet<ItemEncomenda> ItensEncomenda => Set<ItemEncomenda>();
+    public DbSet<Loja> Lojas => Set<Loja>();
+    public DbSet<FormaPagamentoLoja> FormasPagamentoLoja => Set<FormaPagamentoLoja>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -119,6 +121,10 @@ public class AppDbContext : DbContext
             .Property(p => p.Preco)
             .HasPrecision(10, 2);
 
+        modelBuilder.Entity<Produto>()
+            .Property(p => p.PrecoPromocional)
+            .HasPrecision(10, 2);
+
         modelBuilder.Entity<Encomenda>()
             .Property(e => e.Total)
             .HasPrecision(10, 2);
@@ -126,6 +132,18 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<ItemEncomenda>()
             .Property(i => i.PrecoUnitario)
             .HasPrecision(10, 2);
+
+        modelBuilder.Entity<Encomenda>()
+            .Property(e => e.ValorComissao)
+            .HasPrecision(10, 2);
+
+        modelBuilder.Entity<Encomenda>()
+            .Property(e => e.PercentualComissaoAplicado)
+            .HasPrecision(5, 2);
+
+        modelBuilder.Entity<Loja>()
+            .Property(l => l.PercentualComissao)
+            .HasPrecision(5, 2);
 
         modelBuilder.Entity<ItemEncomenda>()
             .HasOne(i => i.Encomenda)
@@ -140,5 +158,31 @@ public class AppDbContext : DbContext
             .WithMany()
             .HasForeignKey(i => i.ProdutoId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        // ── Marketplace multi-loja ──────────────────────────────────────────
+        modelBuilder.Entity<Loja>()
+            .HasIndex(l => l.Email)
+            .IsUnique();
+
+        // Impede eliminar uma loja enquanto ainda tiver produtos (o dono desativa em vez disso)
+        modelBuilder.Entity<Produto>()
+            .HasOne(p => p.Loja)
+            .WithMany()
+            .HasForeignKey(p => p.LojaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Preserva o histórico de encomendas mesmo que a loja seja eliminada mais tarde
+        modelBuilder.Entity<Encomenda>()
+            .HasOne(e => e.Loja)
+            .WithMany()
+            .HasForeignKey(e => e.LojaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // As formas de pagamento pertencem à loja; eliminam-se com ela
+        modelBuilder.Entity<FormaPagamentoLoja>()
+            .HasOne(f => f.Loja)
+            .WithMany(l => l.FormasPagamento)
+            .HasForeignKey(f => f.LojaId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

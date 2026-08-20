@@ -29,7 +29,7 @@ public class UmbunduTopicosController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize]
+    [Authorize(Policy = "Gestor")]
     public async Task<ActionResult<TopicoUmb>> Create(TopicoUmb input)
     {
         input.Slug = SlugHelper.Slugify(input.Nome);
@@ -40,7 +40,7 @@ public class UmbunduTopicosController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [Authorize]
+    [Authorize(Policy = "Gestor")]
     public async Task<IActionResult> Update(int id, TopicoUmb input)
     {
         var existing = await _db.TopicosUmb.FindAsync(id);
@@ -54,7 +54,7 @@ public class UmbunduTopicosController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize]
+    [Authorize(Policy = "Gestor")]
     public async Task<IActionResult> Delete(int id)
     {
         var existing = await _db.TopicosUmb.FindAsync(id);

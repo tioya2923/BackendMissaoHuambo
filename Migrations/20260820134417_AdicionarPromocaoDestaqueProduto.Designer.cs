@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MissaoBackend.Data;
 
@@ -10,9 +11,11 @@ using MissaoBackend.Data;
 namespace MissaoBackend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260820134417_AdicionarPromocaoDestaqueProduto")]
+    partial class AdicionarPromocaoDestaqueProduto
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -371,29 +374,6 @@ namespace MissaoBackend.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("FormasApoio");
-                });
-
-            modelBuilder.Entity("MissaoBackend.Models.FormaPagamentoLoja", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    b.Property<string>("Detalhe")
-                        .HasColumnType("longtext");
-
-                    b.Property<int>("LojaId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Metodo")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("LojaId");
-
-                    b.ToTable("FormasPagamentoLoja");
                 });
 
             modelBuilder.Entity("MissaoBackend.Models.Gestor", b =>
@@ -797,17 +777,6 @@ namespace MissaoBackend.Migrations
                     b.Navigation("Loja");
                 });
 
-            modelBuilder.Entity("MissaoBackend.Models.FormaPagamentoLoja", b =>
-                {
-                    b.HasOne("MissaoBackend.Models.Loja", "Loja")
-                        .WithMany("FormasPagamento")
-                        .HasForeignKey("LojaId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Loja");
-                });
-
             modelBuilder.Entity("MissaoBackend.Models.ItemEncomenda", b =>
                 {
                     b.HasOne("MissaoBackend.Models.Encomenda", "Encomenda")
@@ -856,11 +825,6 @@ namespace MissaoBackend.Migrations
             modelBuilder.Entity("MissaoBackend.Models.Encomenda", b =>
                 {
                     b.Navigation("Itens");
-                });
-
-            modelBuilder.Entity("MissaoBackend.Models.Loja", b =>
-                {
-                    b.Navigation("FormasPagamento");
                 });
 
             modelBuilder.Entity("MissaoBackend.Models.TopicoLat", b =>

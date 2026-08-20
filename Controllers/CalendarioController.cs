@@ -59,7 +59,7 @@ public class CalendarioController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize]
+    [Authorize(Policy = "Gestor")]
     public async Task<IActionResult> Create(Evento input)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -71,7 +71,7 @@ public class CalendarioController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [Authorize]
+    [Authorize(Policy = "Gestor")]
     public async Task<IActionResult> Update(int id, Evento input)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -90,7 +90,7 @@ public class CalendarioController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize]
+    [Authorize(Policy = "Gestor")]
     public async Task<IActionResult> Delete(int id)
     {
         var existing = await _db.Eventos.FindAsync(id);

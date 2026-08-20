@@ -21,7 +21,7 @@ namespace MissaoBackend.Controllers
         }
 
         [HttpPost("topico")]
-        [Authorize]
+        [Authorize(Policy = "Gestor")]
         public async Task<ActionResult<Topico>> CreateTopico(Topico input)
         {
             if (string.IsNullOrWhiteSpace(input.Slug) && !string.IsNullOrWhiteSpace(input.Nome))
@@ -101,7 +101,7 @@ namespace MissaoBackend.Controllers
         }
 
         [HttpPost]
-        [Authorize]
+        [Authorize(Policy = "Gestor")]
         public async Task<ActionResult<Cantico>> Create(Cantico input)
         {
             input.Slug = SlugHelper.Slugify(input.Titulo);
@@ -112,7 +112,7 @@ namespace MissaoBackend.Controllers
         }
 
         [HttpPut("{id:int}")]
-        [Authorize]
+        [Authorize(Policy = "Gestor")]
         public async Task<IActionResult> Update(int id, Cantico input)
         {
             var existing = await _db.Canticos.FindAsync(id);
@@ -128,7 +128,7 @@ namespace MissaoBackend.Controllers
         }
 
         [HttpDelete("{id:int}")]
-        [Authorize]
+        [Authorize(Policy = "Gestor")]
         public async Task<IActionResult> Delete(int id)
         {
             var existing = await _db.Canticos.FindAsync(id);
@@ -140,7 +140,7 @@ namespace MissaoBackend.Controllers
         }
 
         [HttpPost("{id:int}/upload-pdf")]
-        [Authorize]
+        [Authorize(Policy = "Gestor")]
         public async Task<IActionResult> UploadPdf(int id, IFormFile file)
         {
             var cantico = await _db.Canticos.FindAsync(id);
