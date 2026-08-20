@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MissaoBackend.Data;
@@ -9,7 +10,14 @@ namespace MissaoBackend.Controllers
     [Route("api/[controller]")]
     public class CatecismoUbTopicosController : ControllerBase
     {
+        private readonly AppDbContext _context;
+        public CatecismoUbTopicosController(AppDbContext context)
+        {
+            _context = context;
+        }
+
         [HttpPost]
+        [Authorize]
         public async Task<ActionResult<CatecismoUbTopico>> Create(CatecismoUbTopico input)
         {
             input.Slug = MissaoBackend.Utils.SlugHelper.Slugify(input.Titulo);
@@ -20,6 +28,7 @@ namespace MissaoBackend.Controllers
 
         // Permitir POST também em /api/CatecismoUbTopicos/topicos
         [HttpPost("topicos")]
+        [Authorize]
         public async Task<ActionResult<CatecismoUbTopico>> CreateTopico(CatecismoUbTopico input)
         {
             input.Slug = MissaoBackend.Utils.SlugHelper.Slugify(input.Titulo);
@@ -27,10 +36,35 @@ namespace MissaoBackend.Controllers
             await _context.SaveChangesAsync();
             return CreatedAtAction(nameof(GetAll), new { id = input.Id }, input);
         }
-        private readonly AppDbContext _context;
-        public CatecismoUbTopicosController(AppDbContext context)
+
+        [HttpPut("{id:int}")]
+        [Authorize]
+        public async Task<IActionResult> Update(int id, CatecismoUbTopico input)
         {
-            _context = context;
+            var existing = await _context.CatecismoUbTopicos.FindAsync(id);
+            if (existing == null) return NotFound();
+
+            existing.Titulo = input.Titulo;
+            existing.Slug = MissaoBackend.Utils.SlugHelper.Slugify(input.Titulo);
+
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+
+        [HttpDelete("{id:int}")]
+        [Authorize]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var existing = await _context.CatecismoUbTopicos.FindAsync(id);
+            if (existing == null) return NotFound();
+
+            var temPerguntas = await _context.CatecismosUb.AnyAsync(c => c.CatecismoUbTopicoId == id);
+            if (temPerguntas)
+                return BadRequest("Não é possível eliminar: existem perguntas associadas a este tópico.");
+
+            _context.CatecismoUbTopicos.Remove(existing);
+            await _context.SaveChangesAsync();
+            return NoContent();
         }
 
         [HttpGet]

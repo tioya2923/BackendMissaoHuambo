@@ -27,6 +27,11 @@ public class AppDbContext : DbContext
 
     public DbSet<Photo> Photos => Set<Photo>();
     public DbSet<Utilizador> Utilizadores => Set<Utilizador>();
+    public DbSet<FormaApoio> FormasApoio => Set<FormaApoio>();
+
+    public DbSet<Produto> Produtos => Set<Produto>();
+    public DbSet<Encomenda> Encomendas => Set<Encomenda>();
+    public DbSet<ItemEncomenda> ItensEncomenda => Set<ItemEncomenda>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -81,6 +86,59 @@ public class AppDbContext : DbContext
             .HasOne(c => c.Topico)
             .WithMany(t => t.Canticos)
             .HasForeignKey(c => c.TopicoId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Impede eliminar um tópico enquanto ainda tiver conteúdo associado
+        // (o admin tem de mover/eliminar o conteúdo filho primeiro)
+        modelBuilder.Entity<Cantico>()
+            .HasOne(c => c.Topico)
+            .WithMany()
+            .HasForeignKey(c => c.TopicoId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<CatecismoUb>()
+            .HasOne(c => c.CatecismoUbTopico)
+            .WithMany(t => t.CatecismosUb)
+            .HasForeignKey(c => c.CatecismoUbTopicoId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<CatecismoLat>()
+            .HasOne(c => c.CatecismoLatTopico)
+            .WithMany(t => t.CatecismosLat)
+            .HasForeignKey(c => c.CatecismoLatTopicoId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<CatecismoPt>()
+            .HasOne(c => c.CatecismoPtTopico)
+            .WithMany(t => t.CatecismosPt)
+            .HasForeignKey(c => c.CatecismoPtTopicoId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // ── Loja ─────────────────────────────────────────────────────────
+        modelBuilder.Entity<Produto>()
+            .Property(p => p.Preco)
+            .HasPrecision(10, 2);
+
+        modelBuilder.Entity<Encomenda>()
+            .Property(e => e.Total)
+            .HasPrecision(10, 2);
+
+        modelBuilder.Entity<ItemEncomenda>()
+            .Property(i => i.PrecoUnitario)
+            .HasPrecision(10, 2);
+
+        modelBuilder.Entity<ItemEncomenda>()
+            .HasOne(i => i.Encomenda)
+            .WithMany(e => e.Itens)
+            .HasForeignKey(i => i.EncomendaId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Impede eliminar um produto enquanto ainda tiver encomendas associadas
+        // (o histórico fica guardado via snapshot em ItemEncomenda; ver checagem no controller)
+        modelBuilder.Entity<ItemEncomenda>()
+            .HasOne<Produto>()
+            .WithMany()
+            .HasForeignKey(i => i.ProdutoId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

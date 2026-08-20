@@ -69,4 +69,35 @@ public class CalendarioController : ControllerBase
 
         return CreatedAtAction(nameof(GetByDate), new { data = input.Data.ToString("yyyy-MM-dd") }, input);
     }
+
+    [HttpPut("{id:int}")]
+    [Authorize]
+    public async Task<IActionResult> Update(int id, Evento input)
+    {
+        if (!ModelState.IsValid) return BadRequest(ModelState);
+
+        var existing = await _db.Eventos.FindAsync(id);
+        if (existing == null) return NotFound();
+
+        existing.Data = input.Data;
+        existing.Titulo = input.Titulo;
+        existing.Descricao = input.Descricao;
+        existing.Leituras = input.Leituras;
+        existing.Observacoes = input.Observacoes;
+
+        await _db.SaveChangesAsync();
+        return NoContent();
+    }
+
+    [HttpDelete("{id:int}")]
+    [Authorize]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var existing = await _db.Eventos.FindAsync(id);
+        if (existing == null) return NotFound();
+
+        _db.Eventos.Remove(existing);
+        await _db.SaveChangesAsync();
+        return NoContent();
+    }
 }

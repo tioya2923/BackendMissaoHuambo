@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MissaoBackend.Data;
@@ -24,5 +25,45 @@ public class CatecismoLatTopicosController : ControllerBase
         var item = await _context.CatecismoLatTopicos.FirstOrDefaultAsync(t => t.Id == id);
         if (item == null) return NotFound();
         return item;
+    }
+
+    [HttpPost]
+    [Authorize]
+    public async Task<ActionResult<CatecismoLatTopico>> Create(CatecismoLatTopico input)
+    {
+        input.Slug = SlugHelper.Slugify(input.Titulo);
+        _context.CatecismoLatTopicos.Add(input);
+        await _context.SaveChangesAsync();
+        return CreatedAtAction(nameof(GetAll), new { id = input.Id }, input);
+    }
+
+    [HttpPut("{id:int}")]
+    [Authorize]
+    public async Task<IActionResult> Update(int id, CatecismoLatTopico input)
+    {
+        var existing = await _context.CatecismoLatTopicos.FindAsync(id);
+        if (existing == null) return NotFound();
+
+        existing.Titulo = input.Titulo;
+        existing.Slug = SlugHelper.Slugify(input.Titulo);
+
+        await _context.SaveChangesAsync();
+        return NoContent();
+    }
+
+    [HttpDelete("{id:int}")]
+    [Authorize]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var existing = await _context.CatecismoLatTopicos.FindAsync(id);
+        if (existing == null) return NotFound();
+
+        var temTextos = await _context.CatecismosLat.AnyAsync(c => c.CatecismoLatTopicoId == id);
+        if (temTextos)
+            return BadRequest("Não é possível eliminar: existem textos associados a este tópico.");
+
+        _context.CatecismoLatTopicos.Remove(existing);
+        await _context.SaveChangesAsync();
+        return NoContent();
     }
 }

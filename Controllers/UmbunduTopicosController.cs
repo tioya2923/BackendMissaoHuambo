@@ -38,4 +38,34 @@ public class UmbunduTopicosController : ControllerBase
 
         return CreatedAtAction(nameof(GetAll), new { id = input.Id }, input);
     }
+
+    [HttpPut("{id:int}")]
+    [Authorize]
+    public async Task<IActionResult> Update(int id, TopicoUmb input)
+    {
+        var existing = await _db.TopicosUmb.FindAsync(id);
+        if (existing == null) return NotFound();
+
+        existing.Nome = input.Nome;
+        existing.Slug = SlugHelper.Slugify(input.Nome);
+
+        await _db.SaveChangesAsync();
+        return NoContent();
+    }
+
+    [HttpDelete("{id:int}")]
+    [Authorize]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var existing = await _db.TopicosUmb.FindAsync(id);
+        if (existing == null) return NotFound();
+
+        var temCanticos = await _db.CanticosUmb.AnyAsync(c => c.TopicoId == id);
+        if (temCanticos)
+            return BadRequest("Não é possível eliminar: existem cânticos associados a este tópico.");
+
+        _db.TopicosUmb.Remove(existing);
+        await _db.SaveChangesAsync();
+        return NoContent();
+    }
 }

@@ -40,6 +40,22 @@ public class CatecismoLatController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = input.Id }, input);
     }
 
+    [HttpPut("{id}")]
+    [Authorize]
+    public async Task<IActionResult> Update(int id, CatecismoLat input)
+    {
+        var existing = await _context.CatecismosLat.FindAsync(id);
+        if (existing == null) return NotFound();
+
+        existing.Titulo = input.Titulo;
+        existing.Texto = input.Texto;
+        existing.Slug = input.Slug;
+        existing.CatecismoLatTopicoId = input.CatecismoLatTopicoId;
+
+        await _context.SaveChangesAsync();
+        return NoContent();
+    }
+
     [HttpDelete("{id}")]
     [Authorize]
     public async Task<IActionResult> Delete(int id)

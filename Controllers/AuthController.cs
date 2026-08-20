@@ -40,7 +40,14 @@ public class AuthController : ControllerBase
             return Unauthorized("Credenciais inválidas.");
 
         var jwtSection = _config.GetSection("Jwt");
-        var key = Encoding.UTF8.GetBytes(jwtSection["Key"]!);
+        var jwtKey = Environment.GetEnvironmentVariable("JWT_KEY") ?? jwtSection["Key"];
+        var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? jwtSection["Issuer"];
+        var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? jwtSection["Audience"];
+
+        if (string.IsNullOrWhiteSpace(jwtKey) || jwtKey == "USE_ENVIRONMENT_VARIABLE")
+            return StatusCode(500, "JWT_KEY não está configurada no servidor.");
+
+        var key = Encoding.UTF8.GetBytes(jwtKey);
 
         var claims = new[]
         {
@@ -54,8 +61,8 @@ public class AuthController : ControllerBase
         );
 
         var token = new JwtSecurityToken(
-            issuer: jwtSection["Issuer"],
-            audience: jwtSection["Audience"],
+            issuer: jwtIssuer,
+            audience: jwtAudience,
             claims: claims,
             expires: DateTime.UtcNow.AddHours(4),
             signingCredentials: creds

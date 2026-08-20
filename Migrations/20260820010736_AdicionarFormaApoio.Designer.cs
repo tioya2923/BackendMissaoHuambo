@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MissaoBackend.Data;
 
@@ -10,9 +11,11 @@ using MissaoBackend.Data;
 namespace MissaoBackend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260820010736_AdicionarFormaApoio")]
+    partial class AdicionarFormaApoio
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -258,42 +261,6 @@ namespace MissaoBackend.Migrations
                     b.ToTable("CatecismoUbTopicos");
                 });
 
-            modelBuilder.Entity("MissaoBackend.Models.Encomenda", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    b.Property<string>("Contacto")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<DateTime>("Data")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("Estado")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("Morada")
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("NomeCliente")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("Observacoes")
-                        .HasColumnType("longtext");
-
-                    b.Property<decimal>("Total")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("decimal(10,2)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Encomendas");
-                });
-
             modelBuilder.Entity("MissaoBackend.Models.Evento", b =>
                 {
                     b.Property<int>("Id")
@@ -383,38 +350,6 @@ namespace MissaoBackend.Migrations
                     b.ToTable("Gestores");
                 });
 
-            modelBuilder.Entity("MissaoBackend.Models.ItemEncomenda", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    b.Property<int>("EncomendaId")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("PrecoUnitario")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("decimal(10,2)");
-
-                    b.Property<int>("ProdutoId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ProdutoNome")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<int>("Quantidade")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EncomendaId");
-
-                    b.HasIndex("ProdutoId");
-
-                    b.ToTable("ItensEncomenda");
-                });
-
             modelBuilder.Entity("MissaoBackend.Models.Photo", b =>
                 {
                     b.Property<int>("Id")
@@ -439,40 +374,6 @@ namespace MissaoBackend.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Photos");
-                });
-
-            modelBuilder.Entity("MissaoBackend.Models.Produto", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    b.Property<string>("Categoria")
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("Descricao")
-                        .HasColumnType("longtext");
-
-                    b.Property<bool>("Disponivel")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<string>("ImagemUrl")
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("Nome")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<int>("Ordem")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("Preco")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("decimal(10,2)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Produtos");
                 });
 
             modelBuilder.Entity("MissaoBackend.Models.Topico", b =>
@@ -605,7 +506,7 @@ namespace MissaoBackend.Migrations
                     b.HasOne("MissaoBackend.Models.Topico", "Topico")
                         .WithMany()
                         .HasForeignKey("TopicoId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Topico");
@@ -638,7 +539,7 @@ namespace MissaoBackend.Migrations
                     b.HasOne("MissaoBackend.Models.CatecismoLatTopico", "CatecismoLatTopico")
                         .WithMany("CatecismosLat")
                         .HasForeignKey("CatecismoLatTopicoId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("CatecismoLatTopico");
@@ -648,8 +549,7 @@ namespace MissaoBackend.Migrations
                 {
                     b.HasOne("MissaoBackend.Models.CatecismoPtTopico", "CatecismoPtTopico")
                         .WithMany("CatecismosPt")
-                        .HasForeignKey("CatecismoPtTopicoId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .HasForeignKey("CatecismoPtTopicoId");
 
                     b.Navigation("CatecismoPtTopico");
                 });
@@ -669,27 +569,10 @@ namespace MissaoBackend.Migrations
                     b.HasOne("MissaoBackend.Models.CatecismoUbTopico", "CatecismoUbTopico")
                         .WithMany("CatecismosUb")
                         .HasForeignKey("CatecismoUbTopicoId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("CatecismoUbTopico");
-                });
-
-            modelBuilder.Entity("MissaoBackend.Models.ItemEncomenda", b =>
-                {
-                    b.HasOne("MissaoBackend.Models.Encomenda", "Encomenda")
-                        .WithMany("Itens")
-                        .HasForeignKey("EncomendaId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("MissaoBackend.Models.Produto", null)
-                        .WithMany()
-                        .HasForeignKey("ProdutoId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Encomenda");
+                    b.Navigation("CatecismoUbTopico");
                 });
 
             modelBuilder.Entity("MissaoBackend.Models.CatecismoLatTopico", b =>
@@ -707,11 +590,6 @@ namespace MissaoBackend.Migrations
             modelBuilder.Entity("MissaoBackend.Models.CatecismoUbTopico", b =>
                 {
                     b.Navigation("CatecismosUb");
-                });
-
-            modelBuilder.Entity("MissaoBackend.Models.Encomenda", b =>
-                {
-                    b.Navigation("Itens");
                 });
 
             modelBuilder.Entity("MissaoBackend.Models.TopicoLat", b =>

@@ -33,6 +33,25 @@ namespace MissaoBackend.Controllers
             return Created($"/api/Canticos/topico/{input.Slug}", input);
         }
 
+        [HttpGet]
+        public async Task<ActionResult> GetAll()
+        {
+            var canticos = await _db.Canticos
+                .Include(c => c.Topico)
+                .AsNoTracking()
+                .OrderBy(c => c.Titulo)
+                .Select(c => new {
+                    c.Id,
+                    c.Titulo,
+                    c.Slug,
+                    c.TopicoId,
+                    Topico = c.Topico == null ? null : new { c.Topico.Id, c.Topico.Nome, c.Topico.Slug }
+                })
+                .ToListAsync();
+
+            return Ok(canticos);
+        }
+
         [HttpGet("topico/{slug}")]
         public async Task<ActionResult> GetByTopico(string slug)
         {
