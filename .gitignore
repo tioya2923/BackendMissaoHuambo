@@ -7,6 +7,10 @@
 bin/
 obj/
 
+# Ficheiros enviados pelos utilizadores em runtime (fotos de perfil, imagens
+# de produtos, etc.) — vivem no disco do servidor, nunca no controlo de versão.
+wwwroot/
+
 # Visual Studio
 *.user
 .vs/

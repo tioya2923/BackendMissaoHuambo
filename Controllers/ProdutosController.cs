@@ -13,10 +13,12 @@ namespace MissaoBackend.Controllers
     public class ProdutosController : ControllerBase
     {
         private readonly AppDbContext _db;
+        private readonly IWebHostEnvironment _env;
 
-        public ProdutosController(AppDbContext db)
+        public ProdutosController(AppDbContext db, IWebHostEnvironment env)
         {
             _db = db;
+            _env = env;
         }
 
         private int LojaIdAtual =>
@@ -101,6 +103,37 @@ namespace MissaoBackend.Controllers
                 .ToListAsync();
 
             return Ok(produtos);
+        }
+
+        // POST /api/produtos/imagem — protegido (Loja): carrega um ficheiro de imagem a partir
+        // do dispositivo (em vez de indicar um URL externo) e devolve o URL relativo a usar no
+        // campo ImagemUrl do produto (na criação ou edição, como qualquer outro campo).
+        [HttpPost("imagem")]
+        [Authorize(Policy = "Loja")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UploadImagem(IFormFile imagem)
+        {
+            if (imagem == null || imagem.Length == 0)
+                return BadRequest("Ficheiro inválido.");
+
+            var ext = Path.GetExtension(imagem.FileName).ToLowerInvariant();
+            if (ext is not (".jpg" or ".jpeg" or ".png" or ".webp"))
+                return BadRequest("Apenas imagens JPG, PNG ou WEBP são aceites.");
+
+            const long tamanhoMaximo = 5 * 1024 * 1024; // 5 MB
+            if (imagem.Length > tamanhoMaximo)
+                return BadRequest("A imagem não pode exceder 5 MB.");
+
+            var dir = Path.Combine(_env.WebRootPath, "produtos");
+            Directory.CreateDirectory(dir);
+
+            var fileName = $"{LojaIdAtual}-{Guid.NewGuid()}{ext}";
+            var filePath = Path.Combine(dir, fileName);
+
+            await using (var stream = System.IO.File.Create(filePath))
+                await imagem.CopyToAsync(stream);
+
+            return Ok(new { imagemUrl = $"/produtos/{fileName}" });
         }
 
         [HttpPost]
