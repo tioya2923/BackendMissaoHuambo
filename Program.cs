@@ -125,6 +125,9 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("Loja", p => p.RequireClaim("tipo", "loja"));
 });
 
+// Lembrete mensal de apoio voluntário às lojas (a Ndatava não cobra comissão)
+builder.Services.AddHostedService<MissaoBackend.Services.LembreteApoioService>();
+
 var app = builder.Build();
 
 // --- PIPELINE DE MIDDLEWARE ---

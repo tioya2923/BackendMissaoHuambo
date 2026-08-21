@@ -58,6 +58,7 @@ namespace MissaoBackend.Controllers
                     p.Loja.Morada,
                     p.Loja.Latitude,
                     p.Loja.Longitude,
+                    p.Loja.Moeda,
                 },
                 DistanciaKm = (lat.HasValue && lng.HasValue)
                     ? Math.Round(GeoHelper.DistanciaKm(lat.Value, lng.Value, p.Loja.Latitude, p.Loja.Longitude), 1)

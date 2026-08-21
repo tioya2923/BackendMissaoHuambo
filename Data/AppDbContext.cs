@@ -34,6 +34,7 @@ public class AppDbContext : DbContext
     public DbSet<ItemEncomenda> ItensEncomenda => Set<ItemEncomenda>();
     public DbSet<Loja> Lojas => Set<Loja>();
     public DbSet<FormaPagamentoLoja> FormasPagamentoLoja => Set<FormaPagamentoLoja>();
+    public DbSet<ConfiguracaoSistema> ConfiguracaoSistema => Set<ConfiguracaoSistema>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -184,5 +185,9 @@ public class AppDbContext : DbContext
             .WithMany(l => l.FormasPagamento)
             .HasForeignKey(f => f.LojaId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<ConfiguracaoSistema>()
+            .HasIndex(c => c.Chave)
+            .IsUnique();
     }
 }

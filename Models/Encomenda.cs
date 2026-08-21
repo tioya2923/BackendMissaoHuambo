@@ -24,6 +24,10 @@ public class Encomenda
     public string Estado { get; set; } = EstadoEncomenda.Pendente;
     public decimal Total { get; set; }
 
+    // Moeda em que esta encomenda foi feita — fixada no momento da compra a partir da
+    // moeda da loja, para o histórico não mudar mesmo que a loja altere a sua moeda depois.
+    public string Moeda { get; set; } = MissaoBackend.Models.Moeda.AOA;
+
     // Comissão da plataforma, calculada e fixada no momento da compra (a percentagem
     // da loja pode mudar depois, mas não altera encomendas já criadas).
     public decimal PercentualComissaoAplicado { get; set; }

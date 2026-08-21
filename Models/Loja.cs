@@ -21,6 +21,10 @@ public class Loja
     public double Latitude { get; set; }
     public double Longitude { get; set; }
 
+    // Moeda em que a loja vende (todos os seus produtos e encomendas). Escolhida pela
+    // própria loja no registo, conforme o país onde opera — não há conversão automática.
+    public string Moeda { get; set; } = MissaoBackend.Models.Moeda.AOA;
+
     // Métodos de pagamento que a loja aceita (dinheiro, Multicaixa Express, IBAN, etc.)
     // — cada um com o seu detalhe (nº de telefone, IBAN, referência...). A loja escolhe
     // livremente quais aceita. Mostrados ao comprador na confirmação da encomenda.
@@ -30,11 +34,11 @@ public class Loja
     // titular da conta) — complementam as formas de pagamento estruturadas acima.
     public string? InfoPagamento { get; set; }
 
-    // Percentagem que a plataforma retém de cada encomenda desta loja (comissão).
-    // Aplicada e guardada em cada Encomenda no momento da compra; o Gestor pode
-    // ajustá-la por loja ao moderar. O acerto de contas com a loja é feito à parte
-    // (fora da app), com base no total de comissão acumulado.
-    public decimal PercentualComissao { get; set; } = 10m;
+    // Histórico: a Ndatava chegou a cobrar comissão às lojas, mas deixou de o fazer —
+    // agora a manutenção do serviço é sustentada por doações voluntárias (ver
+    // LembreteApoioService). Este campo já não é usado no cálculo de nenhuma encomenda
+    // (fica sempre a 0m no momento da compra); mantido só para não partir o esquema.
+    public decimal PercentualComissao { get; set; } = 0m;
 
     // Uma loja nova só aparece nas pesquisas depois de aprovada pelo administrador
     public bool Aprovada { get; set; } = false;

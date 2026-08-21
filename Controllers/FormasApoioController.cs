@@ -52,6 +52,10 @@ namespace MissaoBackend.Controllers
             if (string.IsNullOrWhiteSpace(input.Label) || string.IsNullOrWhiteSpace(input.Valor))
                 return BadRequest("Label e Valor são obrigatórios.");
 
+            var moeda = string.IsNullOrWhiteSpace(input.Moeda) ? Moeda.AOA : input.Moeda.Trim().ToUpperInvariant();
+            if (!Moeda.EhValida(moeda))
+                return BadRequest($"Moeda inválida. Use uma de: {string.Join(", ", Moeda.Todas)}.");
+
             var forma = new FormaApoio
             {
                 Label = input.Label.Trim(),
@@ -59,6 +63,7 @@ namespace MissaoBackend.Controllers
                 Descricao = input.Descricao?.Trim(),
                 Ativo = input.Ativo,
                 Ordem = input.Ordem,
+                Moeda = moeda,
             };
 
             _db.FormasApoio.Add(forma);
@@ -77,11 +82,16 @@ namespace MissaoBackend.Controllers
             if (string.IsNullOrWhiteSpace(input.Label) || string.IsNullOrWhiteSpace(input.Valor))
                 return BadRequest("Label e Valor são obrigatórios.");
 
+            var moeda = string.IsNullOrWhiteSpace(input.Moeda) ? Moeda.AOA : input.Moeda.Trim().ToUpperInvariant();
+            if (!Moeda.EhValida(moeda))
+                return BadRequest($"Moeda inválida. Use uma de: {string.Join(", ", Moeda.Todas)}.");
+
             existing.Label = input.Label.Trim();
             existing.Valor = input.Valor.Trim();
             existing.Descricao = input.Descricao?.Trim();
             existing.Ativo = input.Ativo;
             existing.Ordem = input.Ordem;
+            existing.Moeda = moeda;
 
             await _db.SaveChangesAsync();
             return NoContent();

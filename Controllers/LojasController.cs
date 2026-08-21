@@ -45,7 +45,7 @@ namespace MissaoBackend.Controllers
         public record RegistoLojaRequest(
             string Nome, string Email, string Password,
             string? Telefone, string? Morada, string? Categoria, string? Descricao,
-            double Latitude, double Longitude);
+            double Latitude, double Longitude, string? Moeda);
 
         public record LojaLoginRequest(string Email, string Password);
         public record LojaLoginResponse(string Token, int LojaId, string Nome, bool Aprovada);
@@ -59,6 +59,8 @@ namespace MissaoBackend.Controllers
                 return BadRequest("A password tem de ter pelo menos 6 caracteres.");
             if (await _db.Lojas.AnyAsync(l => l.Email == req.Email))
                 return BadRequest("Já existe uma loja registada com este email.");
+            if (req.Moeda != null && !Moeda.EhValida(req.Moeda))
+                return BadRequest($"Moeda inválida. Use uma de: {string.Join(", ", Moeda.Todas)}.");
 
             var loja = new Loja
             {
@@ -71,6 +73,7 @@ namespace MissaoBackend.Controllers
                 Descricao = req.Descricao?.Trim(),
                 Latitude = req.Latitude,
                 Longitude = req.Longitude,
+                Moeda = req.Moeda ?? Moeda.AOA,
                 Aprovada = false,
                 Ativa = true,
             };
@@ -128,6 +131,7 @@ namespace MissaoBackend.Controllers
                 l.Morada,
                 l.Latitude,
                 l.Longitude,
+                l.Moeda,
                 FormasPagamento = l.FormasPagamento.Select(ParaFormaPagamento),
                 DistanciaKm = (lat.HasValue && lng.HasValue)
                     ? Math.Round(Utils.GeoHelper.DistanciaKm(lat.Value, lng.Value, l.Latitude, l.Longitude), 1)
@@ -161,6 +165,7 @@ namespace MissaoBackend.Controllers
                 loja.Telefone,
                 loja.Latitude,
                 loja.Longitude,
+                loja.Moeda,
                 loja.InfoPagamento,
                 FormasPagamento = loja.FormasPagamento.Select(ParaFormaPagamento),
                 DistanciaKm = (lat.HasValue && lng.HasValue)
@@ -174,7 +179,7 @@ namespace MissaoBackend.Controllers
         public record AtualizarLojaRequest(
             string Nome, string? Descricao, string? Telefone, string? Morada,
             string? Categoria, string? InfoPagamento, double Latitude, double Longitude,
-            List<FormaPagamentoInput>? FormasPagamento);
+            List<FormaPagamentoInput>? FormasPagamento, string? Moeda);
 
         [HttpGet("eu")]
         [Authorize(Policy = "Loja")]
@@ -199,6 +204,7 @@ namespace MissaoBackend.Controllers
                 FormasPagamento = loja.FormasPagamento.Select(ParaFormaPagamento),
                 loja.Latitude,
                 loja.Longitude,
+                loja.Moeda,
                 loja.Aprovada,
                 loja.Ativa,
                 loja.PercentualComissao,
@@ -211,6 +217,8 @@ namespace MissaoBackend.Controllers
         {
             if (string.IsNullOrWhiteSpace(req.Nome))
                 return BadRequest("O nome é obrigatório.");
+            if (req.Moeda != null && !Moeda.EhValida(req.Moeda))
+                return BadRequest($"Moeda inválida. Use uma de: {string.Join(", ", Moeda.Todas)}.");
 
             if (req.FormasPagamento != null)
             {
@@ -232,6 +240,7 @@ namespace MissaoBackend.Controllers
             loja.InfoPagamento = req.InfoPagamento?.Trim();
             loja.Latitude = req.Latitude;
             loja.Longitude = req.Longitude;
+            if (req.Moeda != null) loja.Moeda = req.Moeda;
 
             if (req.FormasPagamento != null)
             {
@@ -277,6 +286,7 @@ namespace MissaoBackend.Controllers
                 l.Categoria,
                 l.Latitude,
                 l.Longitude,
+                l.Moeda,
                 l.Aprovada,
                 l.Ativa,
                 l.PercentualComissao,

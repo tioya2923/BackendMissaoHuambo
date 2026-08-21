@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MissaoBackend.Data;
 using MissaoBackend.Models;
+using MissaoBackend.Services;
 
 namespace MissaoBackend.Controllers
 {
@@ -12,10 +13,12 @@ namespace MissaoBackend.Controllers
     public class EncomendasController : ControllerBase
     {
         private readonly AppDbContext _db;
+        private readonly IConfiguration _config;
 
-        public EncomendasController(AppDbContext db)
+        public EncomendasController(AppDbContext db, IConfiguration config)
         {
             _db = db;
+            _config = config;
         }
 
         private int LojaIdAtual =>
@@ -42,6 +45,7 @@ namespace MissaoBackend.Controllers
             InfoPagamento = e.Loja?.InfoPagamento,
             FormasPagamento = e.Loja?.FormasPagamento.Select(f => new { f.Metodo, f.Detalhe }) ?? Enumerable.Empty<object>(),
             e.Total,
+            e.Moeda,
             e.Estado,
             Itens = e.Itens.Select(i => new { i.ProdutoNome, i.PrecoUnitario, i.Quantidade }),
         };
@@ -61,6 +65,7 @@ namespace MissaoBackend.Controllers
             e.Observacoes,
             e.Estado,
             e.Total,
+            e.Moeda,
             e.PercentualComissaoAplicado,
             e.ValorComissao,
             ValorLiquido = e.Total - e.ValorComissao,
@@ -117,9 +122,15 @@ namespace MissaoBackend.Controllers
                     itensLoja.Add(item);
                 }
 
-                var loja = produtos.First(p => p.LojaId == grupoLoja.Key).Loja!;
-                var percentualComissao = loja.PercentualComissao;
-                var valorComissao = Math.Round(total * percentualComissao / 100m, 2);
+                // A Ndatava não cobra comissão às lojas — a manutenção do serviço é sustentada
+                // por doações voluntárias (ver LembreteApoioService), nunca por uma percentagem
+                // das vendas. Os campos ficam a 0 para manter o histórico/esquema compatível.
+                const decimal percentualComissao = 0m;
+                const decimal valorComissao = 0m;
+
+                // A moeda é fixada a partir da loja no momento da compra, para o histórico
+                // não mudar mesmo que a loja altere depois a moeda em que vende.
+                var moedaLoja = produtos.First(p => p.LojaId == grupoLoja.Key).Loja!.Moeda;
 
                 var encomenda = new Encomenda
                 {
@@ -129,6 +140,7 @@ namespace MissaoBackend.Controllers
                     Observacoes = input.Observacoes?.Trim(),
                     Estado = EstadoEncomenda.Pendente,
                     Total = total,
+                    Moeda = moedaLoja,
                     PercentualComissaoAplicado = percentualComissao,
                     ValorComissao = valorComissao,
                     LojaId = grupoLoja.Key,
@@ -150,7 +162,43 @@ namespace MissaoBackend.Controllers
                     await _db.Entry(enc.Loja).Collection(l => l.FormasPagamento).LoadAsync();
             }
 
+            // Avisa cada loja por email de que tem uma encomenda nova — não há
+            // notificação push nem SMS, por isso isto é o único aviso automático
+            // que a loja recebe. Uma falha no envio nunca impede a encomenda de
+            // ser criada (EmailService trata e regista o erro internamente).
+            foreach (var enc in encomendasCriadas)
+            {
+                if (enc.Loja == null || string.IsNullOrWhiteSpace(enc.Loja.Email)) continue;
+                await EmailService.EnviarAsync(_config, enc.Loja.Email, $"Nova encomenda #{enc.Id} — {enc.Loja.Nome}", MontarEmailNovaEncomenda(enc));
+            }
+
             return Ok(encomendasCriadas.Select(ParaResposta));
+        }
+
+        private static string MontarEmailNovaEncomenda(Encomenda enc)
+        {
+            var itensHtml = string.Join("", enc.Itens.Select(i =>
+                $"<tr><td style='padding:4px 8px;'>{i.Quantidade}× {i.ProdutoNome}</td>" +
+                $"<td style='padding:4px 8px;text-align:right;'>{Moeda.Formatar(i.PrecoUnitario * i.Quantidade, enc.Moeda)}</td></tr>"));
+
+            return $@"
+                <div style='font-family:sans-serif;color:#222;'>
+                    <h2 style='margin-bottom:4px;'>Nova encomenda recebida</h2>
+                    <p style='color:#666;'>Referência #{enc.Id} · {enc.Data:dd/MM/yyyy HH:mm}</p>
+                    <p><strong>Cliente:</strong> {enc.NomeCliente}<br/>
+                       <strong>Contacto:</strong> {enc.Contacto}
+                       {(string.IsNullOrWhiteSpace(enc.Morada) ? "" : $"<br/><strong>Morada:</strong> {enc.Morada}")}
+                       {(string.IsNullOrWhiteSpace(enc.Observacoes) ? "" : $"<br/><strong>Observações:</strong> {enc.Observacoes}")}
+                    </p>
+                    <table style='border-collapse:collapse;width:100%;max-width:400px;margin-top:12px;'>
+                        {itensHtml}
+                        <tr><td style='padding:8px;font-weight:bold;border-top:1px solid #ddd;'>Total</td>
+                            <td style='padding:8px;font-weight:bold;text-align:right;border-top:1px solid #ddd;'>{Moeda.Formatar(enc.Total, enc.Moeda)}</td></tr>
+                    </table>
+                    <p style='color:#666;margin-top:16px;font-size:13px;'>
+                        Entre no seu painel em Ndatava (área da loja) para confirmar ou atualizar o estado desta encomenda.
+                    </p>
+                </div>";
         }
 
         // GET /api/encomendas — protegido (Gestor): todas as encomendas, de todas as lojas
@@ -179,11 +227,12 @@ namespace MissaoBackend.Controllers
                 .Include(e => e.Loja)
                 .AsNoTracking()
                 .Where(e => e.Estado != EstadoEncomenda.Cancelada)
-                .GroupBy(e => new { e.LojaId, LojaNome = e.Loja!.Nome })
+                .GroupBy(e => new { e.LojaId, LojaNome = e.Loja!.Nome, e.Moeda })
                 .Select(g => new
                 {
                     g.Key.LojaId,
                     g.Key.LojaNome,
+                    g.Key.Moeda,
                     NumeroEncomendas = g.Count(),
                     TotalVendido = g.Sum(e => e.Total),
                     TotalComissao = g.Sum(e => e.ValorComissao),
@@ -220,6 +269,7 @@ namespace MissaoBackend.Controllers
                 e.Observacoes,
                 e.Estado,
                 e.Total,
+                e.Moeda,
                 e.PercentualComissaoAplicado,
                 e.ValorComissao,
                 ValorLiquido = e.Total - e.ValorComissao,

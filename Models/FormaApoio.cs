@@ -8,4 +8,9 @@ public class FormaApoio
     public string? Descricao { get; set; }
     public bool Ativo { get; set; } = true;
     public int Ordem { get; set; } = 0;
+
+    // Moeda em que esta forma de apoio recebe (AOA, EUR, BRL, MZN, CVE, USD) —
+    // permite ter, por exemplo, um IBAN para quem apoia a partir de Portugal
+    // e uma referência Multicaixa para quem apoia a partir de Angola.
+    public string Moeda { get; set; } = MissaoBackend.Models.Moeda.AOA;
 }

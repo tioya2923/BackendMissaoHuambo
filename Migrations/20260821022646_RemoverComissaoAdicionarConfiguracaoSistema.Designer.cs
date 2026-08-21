@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MissaoBackend.Data;
 
@@ -10,9 +11,11 @@ using MissaoBackend.Data;
 namespace MissaoBackend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260821022646_RemoverComissaoAdicionarConfiguracaoSistema")]
+    partial class RemoverComissaoAdicionarConfiguracaoSistema
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -303,10 +306,6 @@ namespace MissaoBackend.Migrations
                     b.Property<int>("LojaId")
                         .HasColumnType("int");
 
-                    b.Property<string>("Moeda")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
                     b.Property<string>("Morada")
                         .HasColumnType("longtext");
 
@@ -384,10 +383,6 @@ namespace MissaoBackend.Migrations
                         .HasColumnType("longtext");
 
                     b.Property<string>("Label")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("Moeda")
                         .IsRequired()
                         .HasColumnType("longtext");
 
@@ -517,10 +512,6 @@ namespace MissaoBackend.Migrations
 
                     b.Property<double>("Longitude")
                         .HasColumnType("double");
-
-                    b.Property<string>("Moeda")
-                        .IsRequired()
-                        .HasColumnType("longtext");
 
                     b.Property<string>("Morada")
                         .HasColumnType("longtext");
