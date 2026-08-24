@@ -19,6 +19,4 @@ public class Utilizador
     // Comunidade
     public string? Diocese { get; set; }
     public string? Paroquia { get; set; }
-    public string? CentroMissionario { get; set; }
-    public string? Catequese { get; set; }
 }

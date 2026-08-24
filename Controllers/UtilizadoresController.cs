@@ -42,9 +42,7 @@ public class UtilizadoresController : ControllerBase
         DataCampoDto? Casamento,
         DataCampoDto? Ordem,
         string? Diocese,
-        string? Paroquia,
-        string? CentroMissionario,
-        string? Catequese
+        string? Paroquia
     );
 
     public record PerfilResponse(
@@ -58,9 +56,7 @@ public class UtilizadoresController : ControllerBase
         DataCampoDto Casamento,
         DataCampoDto Ordem,
         string? Diocese,
-        string? Paroquia,
-        string? CentroMissionario,
-        string? Catequese
+        string? Paroquia
     );
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -82,7 +78,7 @@ public class UtilizadoresController : ControllerBase
         u.Nome, u.Email, u.FotoUrl,
         ParseData(u.Nascimento), ParseData(u.Baptismo), ParseData(u.Comunhao),
         ParseData(u.Crisma), ParseData(u.Casamento), ParseData(u.Ordem),
-        u.Diocese, u.Paroquia, u.CentroMissionario, u.Catequese
+        u.Diocese, u.Paroquia
     );
 
     private string GerarToken(Utilizador u)
@@ -183,11 +179,118 @@ public class UtilizadoresController : ControllerBase
         u.Ordem             = SerializarData(req.Ordem);
         u.Diocese           = req.Diocese?.Trim();
         u.Paroquia          = req.Paroquia?.Trim();
-        u.CentroMissionario = req.CentroMissionario?.Trim();
-        u.Catequese         = req.Catequese?.Trim();
 
         await _db.SaveChangesAsync();
         return Ok(MapPerfil(u));
+    }
+
+    // ── Administração (Gestor) ───────────────────────────────────────────────
+    // Nunca devolve nem aceita a password em texto simples pelo painel de
+    // administração — só o próprio utilizador a define/altera via /registar.
+
+    public record UtilizadorAdminDto(
+        int Id, string Nome, string Email, string? FotoUrl,
+        string? Nascimento, string? Baptismo, string? Comunhao, string? Crisma,
+        string? Casamento, string? Ordem,
+        string? Diocese, string? Paroquia
+    );
+
+    public record AtualizarUtilizadorAdminRequest(
+        string Nome, string Email,
+        string? Nascimento, string? Baptismo, string? Comunhao, string? Crisma,
+        string? Casamento, string? Ordem,
+        string? Diocese, string? Paroquia
+    );
+
+    private static UtilizadorAdminDto MapAdmin(Utilizador u) => new(
+        u.Id, u.Nome, u.Email, u.FotoUrl,
+        u.Nascimento, u.Baptismo, u.Comunhao, u.Crisma, u.Casamento, u.Ordem,
+        u.Diocese, u.Paroquia
+    );
+
+    public record CriarUtilizadorAdminRequest(string Nome, string Email, string PasswordInicial);
+
+    [HttpGet]
+    [Authorize(Policy = "Gestor")]
+    public async Task<IActionResult> ListarAdmin()
+    {
+        var lista = await _db.Utilizadores.OrderBy(u => u.Nome).ToListAsync();
+        return Ok(lista.Select(MapAdmin));
+    }
+
+    [HttpPost]
+    [Authorize(Policy = "Gestor")]
+    public async Task<IActionResult> CriarAdmin([FromBody] CriarUtilizadorAdminRequest req)
+    {
+        if (string.IsNullOrWhiteSpace(req.Nome) ||
+            string.IsNullOrWhiteSpace(req.Email) ||
+            string.IsNullOrWhiteSpace(req.PasswordInicial))
+            return BadRequest("Nome, email e password inicial são obrigatórios.");
+
+        var email = req.Email.Trim().ToLower();
+        if (await _db.Utilizadores.AnyAsync(u => u.Email == email))
+            return Conflict("Este email já está registado.");
+
+        var utilizador = new Utilizador
+        {
+            Nome = req.Nome.Trim(),
+            Email = email,
+            Password = PasswordHasher.Hash(req.PasswordInicial),
+        };
+        _db.Utilizadores.Add(utilizador);
+        await _db.SaveChangesAsync();
+
+        return Ok(MapAdmin(utilizador));
+    }
+
+    [HttpGet("{id:int}")]
+    [Authorize(Policy = "Gestor")]
+    public async Task<IActionResult> GetAdmin(int id)
+    {
+        var u = await _db.Utilizadores.FindAsync(id);
+        if (u == null) return NotFound();
+        return Ok(MapAdmin(u));
+    }
+
+    [HttpPut("{id:int}")]
+    [Authorize(Policy = "Gestor")]
+    public async Task<IActionResult> AtualizarAdmin(int id, [FromBody] AtualizarUtilizadorAdminRequest req)
+    {
+        var u = await _db.Utilizadores.FindAsync(id);
+        if (u == null) return NotFound();
+
+        if (string.IsNullOrWhiteSpace(req.Nome) || string.IsNullOrWhiteSpace(req.Email))
+            return BadRequest("Nome e email são obrigatórios.");
+
+        var novoEmail = req.Email.Trim().ToLower();
+        if (novoEmail != u.Email && await _db.Utilizadores.AnyAsync(x => x.Email == novoEmail && x.Id != id))
+            return Conflict("Já existe outro utilizador com este email.");
+
+        u.Nome = req.Nome.Trim();
+        u.Email = novoEmail;
+        u.Nascimento = req.Nascimento;
+        u.Baptismo = req.Baptismo;
+        u.Comunhao = req.Comunhao;
+        u.Crisma = req.Crisma;
+        u.Casamento = req.Casamento;
+        u.Ordem = req.Ordem;
+        u.Diocese = req.Diocese?.Trim();
+        u.Paroquia = req.Paroquia?.Trim();
+
+        await _db.SaveChangesAsync();
+        return NoContent();
+    }
+
+    [HttpDelete("{id:int}")]
+    [Authorize(Policy = "Gestor")]
+    public async Task<IActionResult> DeleteAdmin(int id)
+    {
+        var u = await _db.Utilizadores.FindAsync(id);
+        if (u == null) return NotFound();
+
+        _db.Utilizadores.Remove(u);
+        await _db.SaveChangesAsync();
+        return NoContent();
     }
 
     [HttpPost("eu/foto")]

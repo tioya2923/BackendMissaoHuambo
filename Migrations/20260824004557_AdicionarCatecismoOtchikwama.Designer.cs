@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MissaoBackend.Data;
 
@@ -10,9 +11,11 @@ using MissaoBackend.Data;
 namespace MissaoBackend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260824004557_AdicionarCatecismoOtchikwama")]
+    partial class AdicionarCatecismoOtchikwama
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -54,40 +57,6 @@ namespace MissaoBackend.Migrations
                     b.HasIndex("TopicoId");
 
                     b.ToTable("Canticos");
-                });
-
-            modelBuilder.Entity("MissaoBackend.Models.CanticoKmb", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    b.Property<string>("Letra")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("PdfUrl")
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("Slug")
-                        .IsRequired()
-                        .HasColumnType("varchar(255)");
-
-                    b.Property<string>("Titulo")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<int>("TopicoId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Slug")
-                        .IsUnique();
-
-                    b.HasIndex("TopicoId");
-
-                    b.ToTable("CanticosKmb");
                 });
 
             modelBuilder.Entity("MissaoBackend.Models.CanticoLat", b =>
@@ -724,28 +693,6 @@ namespace MissaoBackend.Migrations
                     b.ToTable("Topicos");
                 });
 
-            modelBuilder.Entity("MissaoBackend.Models.TopicoKmb", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    b.Property<string>("Nome")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("Slug")
-                        .IsRequired()
-                        .HasColumnType("varchar(255)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Slug")
-                        .IsUnique();
-
-                    b.ToTable("TopicoKmb", (string)null);
-                });
-
             modelBuilder.Entity("MissaoBackend.Models.TopicoLat", b =>
                 {
                     b.Property<int>("Id")
@@ -802,6 +749,12 @@ namespace MissaoBackend.Migrations
                     b.Property<string>("Casamento")
                         .HasColumnType("longtext");
 
+                    b.Property<string>("Catequese")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("CentroMissionario")
+                        .HasColumnType("longtext");
+
                     b.Property<string>("Comunhao")
                         .HasColumnType("longtext");
 
@@ -847,17 +800,6 @@ namespace MissaoBackend.Migrations
                 {
                     b.HasOne("MissaoBackend.Models.Topico", "Topico")
                         .WithMany()
-                        .HasForeignKey("TopicoId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Topico");
-                });
-
-            modelBuilder.Entity("MissaoBackend.Models.CanticoKmb", b =>
-                {
-                    b.HasOne("MissaoBackend.Models.TopicoKmb", "Topico")
-                        .WithMany("Canticos")
                         .HasForeignKey("TopicoId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
@@ -1020,11 +962,6 @@ namespace MissaoBackend.Migrations
             modelBuilder.Entity("MissaoBackend.Models.Loja", b =>
                 {
                     b.Navigation("FormasPagamento");
-                });
-
-            modelBuilder.Entity("MissaoBackend.Models.TopicoKmb", b =>
-                {
-                    b.Navigation("Canticos");
                 });
 
             modelBuilder.Entity("MissaoBackend.Models.TopicoLat", b =>

@@ -29,6 +29,8 @@ builder.Services.AddCors(options =>
             "https://localhost:3000",
             "http://localhost:8081",
             "http://localhost:8082",
+            "http://localhost:8084",
+            "http://localhost:8085",
             "http://localhost:5173",
             "http://localhost:5180",
             "https://www.missaonohuambo.org",
@@ -171,6 +173,12 @@ using (var scope = app.Services.CreateScope())
         // Seed Latim
         await CanticoLatSeeder.SeedAsync(db);
         await CatecismoLatSeeder.SeedAsync(db);
+
+        // Seed Otchikwama (Ordem da Missa)
+        await CatecismoOtcSeeder.SeedAsync(db);
+
+        // Seed Cânticos Kimbundu
+        await CanticoKmbSeeder.SeedAsync(db);
 
         // Seed Tópicos Umbundu
         if (!await db.TopicosUmb.AnyAsync())

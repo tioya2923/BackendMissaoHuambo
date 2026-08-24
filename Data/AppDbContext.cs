@@ -25,6 +25,12 @@ public class AppDbContext : DbContext
     public DbSet<CatecismoLatTopico> CatecismoLatTopicos => Set<CatecismoLatTopico>();
     public DbSet<CatecismoLat> CatecismosLat => Set<CatecismoLat>();
 
+    public DbSet<CatecismoOtc> CatecismosOtc => Set<CatecismoOtc>();
+    public DbSet<CatecismoOtcTopico> CatecismoOtcTopicos => Set<CatecismoOtcTopico>();
+
+    public DbSet<CanticoKmb> CanticosKmb => Set<CanticoKmb>();
+    public DbSet<TopicoKmb> TopicosKmb => Set<TopicoKmb>();
+
     public DbSet<Photo> Photos => Set<Photo>();
     public DbSet<Utilizador> Utilizadores => Set<Utilizador>();
     public DbSet<FormaApoio> FormasApoio => Set<FormaApoio>();
@@ -91,6 +97,21 @@ public class AppDbContext : DbContext
             .HasForeignKey(c => c.TopicoId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        modelBuilder.Entity<TopicoKmb>()
+            .ToTable("TopicoKmb")
+            .HasIndex(t => t.Slug)
+            .IsUnique();
+
+        modelBuilder.Entity<CanticoKmb>()
+            .HasIndex(c => c.Slug)
+            .IsUnique();
+
+        modelBuilder.Entity<CanticoKmb>()
+            .HasOne(c => c.Topico)
+            .WithMany(t => t.Canticos)
+            .HasForeignKey(c => c.TopicoId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         // Impede eliminar um tópico enquanto ainda tiver conteúdo associado
         // (o admin tem de mover/eliminar o conteúdo filho primeiro)
         modelBuilder.Entity<Cantico>()
@@ -115,6 +136,12 @@ public class AppDbContext : DbContext
             .HasOne(c => c.CatecismoPtTopico)
             .WithMany(t => t.CatecismosPt)
             .HasForeignKey(c => c.CatecismoPtTopicoId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<CatecismoOtc>()
+            .HasOne(c => c.CatecismoOtcTopico)
+            .WithMany(t => t.CatecismosOtc)
+            .HasForeignKey(c => c.CatecismoOtcTopicoId)
             .OnDelete(DeleteBehavior.Restrict);
 
         // ── Loja ─────────────────────────────────────────────────────────
