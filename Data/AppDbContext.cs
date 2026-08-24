@@ -31,6 +31,8 @@ public class AppDbContext : DbContext
     public DbSet<CanticoKmb> CanticosKmb => Set<CanticoKmb>();
     public DbSet<TopicoKmb> TopicosKmb => Set<TopicoKmb>();
 
+    public DbSet<Ficheiro> Ficheiros => Set<Ficheiro>();
+
     public DbSet<Utilizador> Utilizadores => Set<Utilizador>();
     public DbSet<FormaApoio> FormasApoio => Set<FormaApoio>();
 
@@ -215,5 +217,11 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<ConfiguracaoSistema>()
             .HasIndex(c => c.Chave)
             .IsUnique();
+
+        // Sem isto, o Pomelo/MySQL escolhe por omissão um BLOB pequeno
+        // (64 KB) — insuficiente para fotos e PDFs.
+        modelBuilder.Entity<Ficheiro>()
+            .Property(f => f.Dados)
+            .HasColumnType("LONGBLOB");
     }
 }

@@ -14,11 +14,13 @@ namespace MissaoBackend.Controllers
     {
         private readonly AppDbContext _db;
         private readonly IWebHostEnvironment _env;
+        private readonly MissaoBackend.Services.ArmazenamentoService _armazenamento;
 
-        public ProdutosController(AppDbContext db, IWebHostEnvironment env)
+        public ProdutosController(AppDbContext db, IWebHostEnvironment env, MissaoBackend.Services.ArmazenamentoService armazenamento)
         {
             _db = db;
             _env = env;
+            _armazenamento = armazenamento;
         }
 
         private int LojaIdAtual =>
@@ -124,16 +126,8 @@ namespace MissaoBackend.Controllers
             if (imagem.Length > tamanhoMaximo)
                 return BadRequest("A imagem não pode exceder 5 MB.");
 
-            var dir = Path.Combine(_env.WebRootPath, "produtos");
-            Directory.CreateDirectory(dir);
-
-            var fileName = $"{LojaIdAtual}-{Guid.NewGuid()}{ext}";
-            var filePath = Path.Combine(dir, fileName);
-
-            await using (var stream = System.IO.File.Create(filePath))
-                await imagem.CopyToAsync(stream);
-
-            return Ok(new { imagemUrl = $"/produtos/{fileName}" });
+            var imagemUrl = await _armazenamento.GuardarAsync(imagem);
+            return Ok(new { imagemUrl });
         }
 
         [HttpPost]

@@ -18,12 +18,14 @@ public class UtilizadoresController : ControllerBase
     private readonly AppDbContext _db;
     private readonly IConfiguration _config;
     private readonly IWebHostEnvironment _env;
+    private readonly ArmazenamentoService _armazenamento;
 
-    public UtilizadoresController(AppDbContext db, IConfiguration config, IWebHostEnvironment env)
+    public UtilizadoresController(AppDbContext db, IConfiguration config, IWebHostEnvironment env, ArmazenamentoService armazenamento)
     {
         _db = db;
         _config = config;
         _env = env;
+        _armazenamento = armazenamento;
     }
 
     // ── DTOs ──────────────────────────────────────────────────────────────────
@@ -310,25 +312,11 @@ public class UtilizadoresController : ControllerBase
         if (ext is not (".jpg" or ".jpeg" or ".png" or ".webp"))
             return BadRequest("Apenas imagens JPG, PNG ou WEBP são aceites.");
 
-        var dir = Path.Combine(_env.WebRootPath, "fotos-perfil");
-        Directory.CreateDirectory(dir);
-
-        var fileName = $"{id}-{Guid.NewGuid()}{ext}";
-        var filePath = Path.Combine(dir, fileName);
-
-        await using (var stream = System.IO.File.Create(filePath))
-            await foto.CopyToAsync(stream);
-
-        // Apagar foto anterior
-        if (!string.IsNullOrEmpty(u.FotoUrl))
-        {
-            var anterior = Path.Combine(_env.WebRootPath,
-                u.FotoUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
-            if (System.IO.File.Exists(anterior)) System.IO.File.Delete(anterior);
-        }
-
-        u.FotoUrl = $"/fotos-perfil/{fileName}";
+        var urlAnterior = u.FotoUrl;
+        u.FotoUrl = await _armazenamento.GuardarAsync(foto);
         await _db.SaveChangesAsync();
+        await _armazenamento.ApagarSeForNossoAsync(urlAnterior);
+
         return Ok(new { fotoUrl = u.FotoUrl });
     }
 }

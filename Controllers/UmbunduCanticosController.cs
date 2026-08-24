@@ -13,11 +13,13 @@ public class UmbunduCanticosController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly IWebHostEnvironment _env;
+    private readonly MissaoBackend.Services.ArmazenamentoService _armazenamento;
 
-    public UmbunduCanticosController(AppDbContext db, IWebHostEnvironment env)
+    public UmbunduCanticosController(AppDbContext db, IWebHostEnvironment env, MissaoBackend.Services.ArmazenamentoService armazenamento)
     {
         _db = db;
         _env = env;
+        _armazenamento = armazenamento;
     }
 
     // ============================
@@ -181,20 +183,10 @@ public class UmbunduCanticosController : ControllerBase
         if (file == null || file.Length == 0)
             return BadRequest("Nenhum ficheiro enviado.");
 
-        var root = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
-        var uploadsDir = Path.Combine(root, "partituras");
-        Directory.CreateDirectory(uploadsDir);
-
-        var fileName = $"{cantico.Slug}-{Guid.NewGuid():N}.pdf";
-        var filePath = Path.Combine(uploadsDir, fileName);
-
-        using (var stream = new FileStream(filePath, FileMode.Create))
-        {
-            await file.CopyToAsync(stream);
-        }
-
-        cantico.PdfUrl = $"/partituras/{fileName}";
+        var urlAnterior = cantico.PdfUrl;
+        cantico.PdfUrl = await _armazenamento.GuardarAsync(file);
         await _db.SaveChangesAsync();
+        await _armazenamento.ApagarSeForNossoAsync(urlAnterior);
 
         return Ok(new { cantico.Id, cantico.PdfUrl, Codigo = cantico.Slug });
     }

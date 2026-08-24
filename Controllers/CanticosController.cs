@@ -13,11 +13,13 @@ namespace MissaoBackend.Controllers
     {
         private readonly AppDbContext _db;
         private readonly IWebHostEnvironment _env;
+        private readonly MissaoBackend.Services.ArmazenamentoService _armazenamento;
 
-        public CanticosController(AppDbContext db, IWebHostEnvironment env)
+        public CanticosController(AppDbContext db, IWebHostEnvironment env, MissaoBackend.Services.ArmazenamentoService armazenamento)
         {
             _db = db;
             _env = env;
+            _armazenamento = armazenamento;
         }
 
         [HttpPost("topico")]
@@ -153,20 +155,10 @@ namespace MissaoBackend.Controllers
             if (!string.Equals(ext, ".pdf", StringComparison.OrdinalIgnoreCase))
                 return BadRequest("Apenas ficheiros PDF são permitidos.");
 
-            var root = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
-            var uploadsDir = Path.Combine(root, "partituras");
-            Directory.CreateDirectory(uploadsDir);
-
-            var fileName = $"{cantico.Slug}-{Guid.NewGuid():N}.pdf";
-            var filePath = Path.Combine(uploadsDir, fileName);
-
-            using (var stream = new FileStream(filePath, FileMode.Create))
-            {
-                await file.CopyToAsync(stream);
-            }
-
-            cantico.PdfUrl = $"/partituras/{fileName}";
+            var urlAnterior = cantico.PdfUrl;
+            cantico.PdfUrl = await _armazenamento.GuardarAsync(file);
             await _db.SaveChangesAsync();
+            await _armazenamento.ApagarSeForNossoAsync(urlAnterior);
 
             return Ok(new { cantico.Id, cantico.PdfUrl });
         }
