@@ -31,7 +31,6 @@ public class AppDbContext : DbContext
     public DbSet<CanticoKmb> CanticosKmb => Set<CanticoKmb>();
     public DbSet<TopicoKmb> TopicosKmb => Set<TopicoKmb>();
 
-    public DbSet<Photo> Photos => Set<Photo>();
     public DbSet<Utilizador> Utilizadores => Set<Utilizador>();
     public DbSet<FormaApoio> FormasApoio => Set<FormaApoio>();
 
