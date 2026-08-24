@@ -119,7 +119,7 @@ public class LembreteApoioService : BackgroundService
     {
         var frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_BASE_URL")
             ?? config["Frontend:BaseUrl"]
-            ?? "https://www.missaonohuambo.org";
+            ?? "https://missaofrontend.onrender.com";
         var linkApoiar = $"{frontendUrl.TrimEnd('/')}/apoiar";
 
         var nomeMes = $"{MesesPt[referencia.Month - 1]} de {referencia.Year}";
