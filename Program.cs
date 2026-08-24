@@ -34,8 +34,7 @@ builder.Services.AddCors(options =>
             "http://localhost:5173",
             "http://localhost:5180",
             "https://www.missaonohuambo.org",
-            "https://missaonohuambo.org",
-            "https://api.missaonohuambo.org")
+            "https://missaonohuambo.org")
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
