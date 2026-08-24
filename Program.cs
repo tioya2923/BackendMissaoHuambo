@@ -33,7 +33,7 @@ builder.Services.AddCors(options =>
             "http://localhost:8085",
             "http://localhost:5173",
             "http://localhost:5180",
-            "https://missaofrontend.onrender.com")
+            "https://ndatava.onrender.com")
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
