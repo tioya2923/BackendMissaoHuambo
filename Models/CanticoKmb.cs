@@ -8,6 +8,7 @@ public class CanticoKmb
     public string Titulo { get; set; } = string.Empty;
     public string Slug { get; set; } = string.Empty;
     public string Letra { get; set; } = string.Empty;
+    public string? Autor { get; set; }
     public string? PdfUrl { get; set; }
 
     public int TopicoId { get; set; }
