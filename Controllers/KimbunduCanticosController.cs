@@ -126,6 +126,9 @@ public class KimbunduCanticosController : ControllerBase
     public async Task<ActionResult<CanticoKmb>> Create(CanticoKmb input)
     {
         input.Slug = SlugHelper.Slugify(input.Titulo);
+        if (await _db.CanticosKmb.AnyAsync(c => c.Slug == input.Slug))
+            return Conflict("Já existe um cântico com este título.");
+
         _db.CanticosKmb.Add(input);
         await _db.SaveChangesAsync();
 
@@ -143,10 +146,15 @@ public class KimbunduCanticosController : ControllerBase
         if (existing == null)
             return NotFound();
 
+        var novoSlug = SlugHelper.Slugify(input.Titulo);
+        if (novoSlug != existing.Slug && await _db.CanticosKmb.AnyAsync(c => c.Slug == novoSlug && c.Id != id))
+            return Conflict("Já existe um cântico com este título.");
+
         existing.Titulo = input.Titulo;
         existing.Letra = input.Letra;
+        existing.Autor = input.Autor;
         existing.TopicoId = input.TopicoId;
-        existing.Slug = SlugHelper.Slugify(input.Titulo);
+        existing.Slug = novoSlug;
 
         await _db.SaveChangesAsync();
         return NoContent();

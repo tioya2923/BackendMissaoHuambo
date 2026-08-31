@@ -64,6 +64,9 @@ public class CanticosLatController : ControllerBase
     public async Task<ActionResult<CanticoLat>> Create(CanticoLat input)
     {
         input.Slug = SlugHelper.Slugify(input.Titulo);
+        if (await _db.CanticosLat.AnyAsync(c => c.Slug == input.Slug))
+            return Conflict("Já existe um cântico com este título.");
+
         _db.CanticosLat.Add(input);
         await _db.SaveChangesAsync();
         return CreatedAtAction(nameof(GetBySlug), new { slug = input.Slug }, input);
@@ -75,10 +78,16 @@ public class CanticosLatController : ControllerBase
     {
         var existing = await _db.CanticosLat.FindAsync(id);
         if (existing == null) return NotFound();
+
+        var novoSlug = SlugHelper.Slugify(input.Titulo);
+        if (novoSlug != existing.Slug && await _db.CanticosLat.AnyAsync(c => c.Slug == novoSlug && c.Id != id))
+            return Conflict("Já existe um cântico com este título.");
+
         existing.Titulo = input.Titulo;
         existing.Letra = input.Letra;
+        existing.Autor = input.Autor;
         existing.TopicoId = input.TopicoId;
-        existing.Slug = SlugHelper.Slugify(input.Titulo);
+        existing.Slug = novoSlug;
         await _db.SaveChangesAsync();
         return NoContent();
     }
