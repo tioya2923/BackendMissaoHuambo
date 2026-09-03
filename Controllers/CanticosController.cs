@@ -7,6 +7,12 @@ using MissaoBackend.Utils;
 
 namespace MissaoBackend.Controllers
 {
+    /// <summary>
+    /// Cânticos e tópicos de cânticos, para qualquer idioma. Por omissão devolve/gere
+    /// conteúdo em Português (?idioma=pt), para manter compatibilidade com clientes
+    /// antigos que ainda não enviam o parâmetro idioma. Passe ?idioma=umb, ?idioma=lat,
+    /// ?idioma=kmb, ?idioma=otc (ou qualquer código criado em /api/Idiomas) para os outros idiomas.
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
     public class CanticosController : ControllerBase
@@ -22,25 +28,47 @@ namespace MissaoBackend.Controllers
             _armazenamento = armazenamento;
         }
 
+        private async Task<int?> ResolverIdiomaId(string idioma)
+        {
+            var codigo = string.IsNullOrWhiteSpace(idioma) ? "pt" : idioma.Trim().ToLowerInvariant();
+            var id = await _db.Idiomas.Where(i => i.Codigo == codigo).Select(i => (int?)i.Id).FirstOrDefaultAsync();
+            return id;
+        }
+
         [HttpPost("topico")]
         [Authorize(Policy = "Gestor")]
-        public async Task<ActionResult<Topico>> CreateTopico(Topico input)
+        public async Task<ActionResult<Topico>> CreateTopico(Topico input, [FromQuery] string idioma = "pt")
         {
             if (string.IsNullOrWhiteSpace(input.Slug) && !string.IsNullOrWhiteSpace(input.Nome))
             {
                 input.Slug = SlugHelper.Slugify(input.Nome);
             }
+
+            if (input.IdiomaId == 0)
+            {
+                var idiomaId = await ResolverIdiomaId(idioma);
+                if (idiomaId == null) return BadRequest($"Idioma '{idioma}' não existe.");
+                input.IdiomaId = idiomaId.Value;
+            }
+
+            if (await _db.Topicos.AnyAsync(t => t.IdiomaId == input.IdiomaId && t.Slug == input.Slug))
+                return Conflict("Já existe um tópico com este nome neste idioma.");
+
             _db.Topicos.Add(input);
             await _db.SaveChangesAsync();
-            return Created($"/api/Canticos/topico/{input.Slug}", input);
+            return Created($"/api/Canticos/topico/{input.Slug}?idioma={idioma}", input);
         }
 
         [HttpGet]
-        public async Task<ActionResult> GetAll()
+        public async Task<ActionResult> GetAll([FromQuery] string idioma = "pt")
         {
+            var idiomaId = await ResolverIdiomaId(idioma);
+            if (idiomaId == null) return BadRequest($"Idioma '{idioma}' não existe.");
+
             var canticos = await _db.Canticos
                 .Include(c => c.Topico)
                 .AsNoTracking()
+                .Where(c => c.IdiomaId == idiomaId)
                 .OrderBy(c => c.Titulo)
                 .Select(c => new {
                     c.Id,
@@ -55,11 +83,14 @@ namespace MissaoBackend.Controllers
         }
 
         [HttpGet("topico/{slug}")]
-        public async Task<ActionResult> GetByTopico(string slug)
+        public async Task<ActionResult> GetByTopico(string slug, [FromQuery] string idioma = "pt")
         {
+            var idiomaId = await ResolverIdiomaId(idioma);
+            if (idiomaId == null) return BadRequest($"Idioma '{idioma}' não existe.");
+
             var topico = await _db.Topicos
                 .AsNoTracking()
-                .FirstOrDefaultAsync(t => t.Slug == slug);
+                .FirstOrDefaultAsync(t => t.Slug == slug && t.IdiomaId == idiomaId);
 
             if (topico == null) return NotFound();
 
@@ -73,28 +104,34 @@ namespace MissaoBackend.Controllers
         }
 
         [HttpGet("{slug}")]
-        public async Task<ActionResult<Cantico>> GetBySlug(string slug)
+        public async Task<ActionResult<Cantico>> GetBySlug(string slug, [FromQuery] string idioma = "pt")
         {
+            var idiomaId = await ResolverIdiomaId(idioma);
+            if (idiomaId == null) return BadRequest($"Idioma '{idioma}' não existe.");
+
             var cantico = await _db.Canticos
                 .AsNoTracking()
-                .FirstOrDefaultAsync(c => c.Slug == slug);
+                .FirstOrDefaultAsync(c => c.Slug == slug && c.IdiomaId == idiomaId);
 
             if (cantico == null) return NotFound();
             return Ok(cantico);
         }
 
         [HttpGet("search")]
-        public async Task<ActionResult> Search([FromQuery] string q)
+        public async Task<ActionResult> Search([FromQuery] string q, [FromQuery] string idioma = "pt")
         {
             if (string.IsNullOrWhiteSpace(q))
                 return Ok(Array.Empty<object>());
 
+            var idiomaId = await ResolverIdiomaId(idioma);
+            if (idiomaId == null) return BadRequest($"Idioma '{idioma}' não existe.");
+
             q = q.Trim();
 
             var results = await _db.Canticos
-                .Where(c =>
-                    EF.Functions.Like(c.Titulo, $"%{q}%") ||
-                    EF.Functions.Like(c.Letra, $"%{q}%"))
+                .Where(c => c.IdiomaId == idiomaId &&
+                    (EF.Functions.Like(c.Titulo, $"%{q}%") ||
+                    EF.Functions.Like(c.Letra, $"%{q}%")))
                 .OrderBy(c => c.Titulo)
                 .Select(c => new { c.Id, c.Titulo, c.Slug })
                 .ToListAsync();
@@ -104,16 +141,24 @@ namespace MissaoBackend.Controllers
 
         [HttpPost]
         [Authorize(Policy = "Gestor")]
-        public async Task<ActionResult<Cantico>> Create(Cantico input)
+        public async Task<ActionResult<Cantico>> Create(Cantico input, [FromQuery] string idioma = "pt")
         {
+            if (input.IdiomaId == 0)
+            {
+                var idiomaId = await ResolverIdiomaId(idioma);
+                if (idiomaId == null) return BadRequest($"Idioma '{idioma}' não existe.");
+                input.IdiomaId = idiomaId.Value;
+            }
+
             input.Slug = SlugHelper.Slugify(input.Titulo);
-            if (await _db.Canticos.AnyAsync(c => c.Slug == input.Slug))
-                return Conflict("Já existe um cântico com este título.");
+            if (await _db.Canticos.AnyAsync(c => c.Slug == input.Slug && c.IdiomaId == input.IdiomaId))
+                return Conflict("Já existe um cântico com este título neste idioma.");
 
             _db.Canticos.Add(input);
             await _db.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetBySlug), new { slug = input.Slug }, input);
+            var codigoIdioma = await _db.Idiomas.Where(i => i.Id == input.IdiomaId).Select(i => i.Codigo).FirstAsync();
+            return CreatedAtAction(nameof(GetBySlug), new { slug = input.Slug, idioma = codigoIdioma }, input);
         }
 
         [HttpPut("{id:int}")]
@@ -124,8 +169,8 @@ namespace MissaoBackend.Controllers
             if (existing == null) return NotFound();
 
             var novoSlug = SlugHelper.Slugify(input.Titulo);
-            if (novoSlug != existing.Slug && await _db.Canticos.AnyAsync(c => c.Slug == novoSlug && c.Id != id))
-                return Conflict("Já existe um cântico com este título.");
+            if (novoSlug != existing.Slug && await _db.Canticos.AnyAsync(c => c.Slug == novoSlug && c.IdiomaId == existing.IdiomaId && c.Id != id))
+                return Conflict("Já existe um cântico com este título neste idioma.");
 
             existing.Titulo = input.Titulo;
             existing.Letra = input.Letra;

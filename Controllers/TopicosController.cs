@@ -7,6 +7,10 @@ using MissaoBackend.Utils;
 
 namespace MissaoBackend.Controllers;
 
+/// <summary>
+/// Tópicos de cânticos, para qualquer idioma. Por omissão devolve/gere conteúdo em
+/// Português (?idioma=pt), para manter compatibilidade com clientes antigos.
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class TopicosController : ControllerBase
@@ -18,10 +22,21 @@ public class TopicosController : ControllerBase
         _db = db;
     }
 
-    [HttpGet]
-    public async Task<ActionResult<IEnumerable<Topico>>> GetAll()
+    private async Task<int?> ResolverIdiomaId(string idioma)
     {
+        var codigo = string.IsNullOrWhiteSpace(idioma) ? "pt" : idioma.Trim().ToLowerInvariant();
+        var id = await _db.Idiomas.Where(i => i.Codigo == codigo).Select(i => (int?)i.Id).FirstOrDefaultAsync();
+        return id;
+    }
+
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<Topico>>> GetAll([FromQuery] string idioma = "pt")
+    {
+        var idiomaId = await ResolverIdiomaId(idioma);
+        if (idiomaId == null) return BadRequest($"Idioma '{idioma}' não existe.");
+
         var topicos = await _db.Topicos
+            .Where(t => t.IdiomaId == idiomaId)
             .OrderBy(t => t.Nome)
             .ToListAsync();
 
@@ -30,8 +45,15 @@ public class TopicosController : ControllerBase
 
     [HttpPost]
     [Authorize(Policy = "Gestor")]
-    public async Task<ActionResult<Topico>> Create(Topico input)
+    public async Task<ActionResult<Topico>> Create(Topico input, [FromQuery] string idioma = "pt")
     {
+        if (input.IdiomaId == 0)
+        {
+            var idiomaId = await ResolverIdiomaId(idioma);
+            if (idiomaId == null) return BadRequest($"Idioma '{idioma}' não existe.");
+            input.IdiomaId = idiomaId.Value;
+        }
+
         input.Slug = SlugHelper.Slugify(input.Nome);
         _db.Topicos.Add(input);
         await _db.SaveChangesAsync();

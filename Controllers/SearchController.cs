@@ -28,8 +28,11 @@ namespace MissaoBackend.Controllers
             if (string.IsNullOrWhiteSpace(q))
                 return BadRequest("Query string is required.");
 
+            // A tabela Canticos passou a ser genérica (todos os idiomas); esta pesquisa
+            // global continua a mostrar só Português aqui — o idioma "canticosUmb" abaixo
+            // continua à parte — para não duplicar nem misturar resultados de outros idiomas.
             var canticos = await _context.Canticos
-                .Where(c => c.Titulo.Contains(q) || c.Letra.Contains(q))
+                .Where(c => c.IdiomaId == 1 && (c.Titulo.Contains(q) || c.Letra.Contains(q)))
                 .OrderByDescending(c => c.Titulo.Contains(q))
                 .ThenBy(c => c.Titulo)
                 .Take(LimitePorSeccao)
@@ -45,7 +48,7 @@ namespace MissaoBackend.Controllers
                 .ToListAsync();
 
             var topicos = await _context.Topicos
-                .Where(t => t.Nome.Contains(q) || t.Slug.Contains(q))
+                .Where(t => t.IdiomaId == 1 && (t.Nome.Contains(q) || t.Slug.Contains(q)))
                 .Take(LimitePorSeccao)
                 .Select(t => new { t.Id, t.Nome, t.Slug })
                 .ToListAsync();
@@ -57,7 +60,7 @@ namespace MissaoBackend.Controllers
                 .ToListAsync();
 
             var catecismosPt = await _context.CatecismosPt
-                .Where(c => c.Titulo.Contains(q) || c.Texto.Contains(q))
+                .Where(c => c.IdiomaId == 1 && (c.Titulo.Contains(q) || c.Texto.Contains(q)))
                 .OrderByDescending(c => c.Titulo.Contains(q))
                 .ThenBy(c => c.Titulo)
                 .Take(LimitePorSeccao)

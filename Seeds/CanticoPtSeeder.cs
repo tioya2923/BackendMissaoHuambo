@@ -9,7 +9,10 @@ public static class CanticoPtSeeder
 {
     public static async Task SeedAsync(AppDbContext db)
     {
-        var topicoList = await db.Topicos.ToListAsync();
+        var idiomaPtId = await db.Idiomas.Where(i => i.Codigo == "pt").Select(i => i.Id).FirstOrDefaultAsync();
+        if (idiomaPtId == 0) return;
+
+        var topicoList = await db.Topicos.Where(t => t.IdiomaId == idiomaPtId).ToListAsync();
         if (!topicoList.Any()) return;
 
         // Case-insensitive match on topic name (slugs in DB have inconsistent formatting)
@@ -18,7 +21,7 @@ public static class CanticoPtSeeder
             t => t.Id
         );
 
-        var existingSlugs = (await db.Canticos.Select(c => c.Slug).ToListAsync()).ToHashSet();
+        var existingSlugs = (await db.Canticos.Where(c => c.IdiomaId == idiomaPtId).Select(c => c.Slug).ToListAsync()).ToHashSet();
 
         var novos = GetCanticos()
             .Where(c => topicoByNome.ContainsKey(c.TopicoNome))
@@ -29,7 +32,8 @@ public static class CanticoPtSeeder
                 Titulo = x.Data.Titulo,
                 Slug = x.Slug,
                 Letra = x.Data.Letra,
-                TopicoId = topicoByNome[x.Data.TopicoNome]
+                TopicoId = topicoByNome[x.Data.TopicoNome],
+                IdiomaId = idiomaPtId
             })
             .ToList();
 

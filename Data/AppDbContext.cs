@@ -8,6 +8,7 @@ public class AppDbContext : DbContext
     public AppDbContext(DbContextOptions<AppDbContext> options)
         : base(options) { }
 
+    public DbSet<Idioma> Idiomas => Set<Idioma>();
     public DbSet<Topico> Topicos => Set<Topico>();
     public DbSet<Cantico> Canticos => Set<Cantico>();
     public DbSet<CanticoUmb> CanticosUmb => Set<CanticoUmb>();
@@ -47,13 +48,53 @@ public class AppDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
+        // ── Idiomas ──────────────────────────────────────────────────────
+        modelBuilder.Entity<Idioma>()
+            .HasIndex(i => i.Codigo)
+            .IsUnique();
+
+        modelBuilder.Entity<Idioma>().HasData(
+            new Idioma { Id = 1, Codigo = "pt", Nome = "Português", Ordem = 1, Ativo = true },
+            new Idioma { Id = 2, Codigo = "umb", Nome = "Umbundu", Ordem = 2, Ativo = true },
+            new Idioma { Id = 3, Codigo = "lat", Nome = "Latim", Ordem = 3, Ativo = true },
+            new Idioma { Id = 4, Codigo = "kmb", Nome = "Kimbundu", Ordem = 4, Ativo = true },
+            new Idioma { Id = 5, Codigo = "otc", Nome = "Otchikwanyama", Ordem = 5, Ativo = true }
+        );
+
+        // Topico/Cantico (Português) passam a ser as tabelas genéricas multi-idioma;
+        // o slug deixa de ser único globalmente e passa a ser único por idioma,
+        // porque idiomas diferentes podem repetir o mesmo nome de tópico (ex: "Comunhão").
         modelBuilder.Entity<Topico>()
-            .HasIndex(t => t.Slug)
+            .HasIndex(t => new { t.IdiomaId, t.Slug })
+            .IsUnique();
+
+        modelBuilder.Entity<Topico>()
+            .HasOne(t => t.Idioma)
+            .WithMany()
+            .HasForeignKey(t => t.IdiomaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Cantico>()
+            .HasIndex(c => new { c.IdiomaId, c.Slug })
             .IsUnique();
 
         modelBuilder.Entity<Cantico>()
-            .HasIndex(c => c.Slug)
-            .IsUnique();
+            .HasOne(c => c.Idioma)
+            .WithMany()
+            .HasForeignKey(c => c.IdiomaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<CatecismoPtTopico>()
+            .HasOne(t => t.Idioma)
+            .WithMany()
+            .HasForeignKey(t => t.IdiomaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<CatecismoPt>()
+            .HasOne(c => c.Idioma)
+            .WithMany()
+            .HasForeignKey(c => c.IdiomaId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<CanticoUmb>()
             .HasIndex(c => c.Slug)

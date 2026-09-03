@@ -16,4 +16,9 @@ public class Cantico
     // Ignora no POST/PUT, mas permite mostrar no GET
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public Topico? Topico { get; set; }
+
+    public int IdiomaId { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public Idioma? Idioma { get; set; }
 }

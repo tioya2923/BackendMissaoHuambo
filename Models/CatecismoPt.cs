@@ -12,5 +12,8 @@ namespace MissaoBackend.Models
 
         public int? CatecismoPtTopicoId { get; set; }
         public CatecismoPtTopico? CatecismoPtTopico { get; set; }
+
+        public int IdiomaId { get; set; }
+        public Idioma? Idioma { get; set; }
     }
 }

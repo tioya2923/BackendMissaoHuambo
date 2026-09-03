@@ -14,5 +14,8 @@ namespace MissaoBackend.Models
         public CatecismoPtTopico? Parent { get; set; }
         public List<CatecismoPtTopico> SubTopicos { get; set; } = new();
         public List<CatecismoPt> CatecismosPt { get; set; } = new();
+
+        public int IdiomaId { get; set; }
+        public Idioma? Idioma { get; set; }
     }
 }

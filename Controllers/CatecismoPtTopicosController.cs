@@ -7,6 +7,10 @@ using MissaoBackend.Utils;
 
 namespace MissaoBackend.Controllers
 {
+    /// <summary>
+    /// Tópicos de catecismo/orações, para qualquer idioma. Por omissão devolve/gere
+    /// conteúdo em Português (?idioma=pt), para manter compatibilidade com clientes antigos.
+    /// </summary>
     [ApiController]
     [Route("api/[controller]/topicos")]
     public class CatecismoPtTopicosController : ControllerBase
@@ -17,21 +21,35 @@ namespace MissaoBackend.Controllers
             _context = context;
         }
 
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<CatecismoPtTopico>>> GetAll()
+        private async Task<int?> ResolverIdiomaId(string idioma)
         {
+            var codigo = string.IsNullOrWhiteSpace(idioma) ? "pt" : idioma.Trim().ToLowerInvariant();
+            var id = await _context.Idiomas.Where(i => i.Codigo == codigo).Select(i => (int?)i.Id).FirstOrDefaultAsync();
+            return id;
+        }
+
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<CatecismoPtTopico>>> GetAll([FromQuery] string idioma = "pt")
+        {
+            var idiomaId = await ResolverIdiomaId(idioma);
+            if (idiomaId == null) return BadRequest($"Idioma '{idioma}' não existe.");
+
             return await _context.CatecismoPtTopicos
-                .Where(t => t.ParentId == null)
+                .Where(t => t.ParentId == null && t.IdiomaId == idiomaId)
                 .ToListAsync();
         }
 
         // Lista plana com todos os tópicos e subtópicos — usada pelo painel de administração
         [HttpGet("todos")]
         [Authorize(Policy = "Gestor")]
-        public async Task<ActionResult<IEnumerable<CatecismoPtTopico>>> GetTodosPlano()
+        public async Task<ActionResult<IEnumerable<CatecismoPtTopico>>> GetTodosPlano([FromQuery] string idioma = "pt")
         {
+            var idiomaId = await ResolverIdiomaId(idioma);
+            if (idiomaId == null) return BadRequest($"Idioma '{idioma}' não existe.");
+
             return await _context.CatecismoPtTopicos
                 .AsNoTracking()
+                .Where(t => t.IdiomaId == idiomaId)
                 .OrderBy(t => t.Titulo)
                 .ToListAsync();
         }
@@ -53,17 +71,27 @@ namespace MissaoBackend.Controllers
         }
 
         [HttpGet("slug/{slug}")]
-        public async Task<ActionResult<CatecismoPtTopico>> GetBySlug(string slug)
+        public async Task<ActionResult<CatecismoPtTopico>> GetBySlug(string slug, [FromQuery] string idioma = "pt")
         {
-            var item = await _context.CatecismoPtTopicos.FirstOrDefaultAsync(t => t.Slug == slug);
+            var idiomaId = await ResolverIdiomaId(idioma);
+            if (idiomaId == null) return BadRequest($"Idioma '{idioma}' não existe.");
+
+            var item = await _context.CatecismoPtTopicos.FirstOrDefaultAsync(t => t.Slug == slug && t.IdiomaId == idiomaId);
             if (item == null) return NotFound();
             return item;
         }
 
         [HttpPost]
         [Authorize(Policy = "Gestor")]
-        public async Task<ActionResult<CatecismoPtTopico>> Create(CatecismoPtTopico input)
+        public async Task<ActionResult<CatecismoPtTopico>> Create(CatecismoPtTopico input, [FromQuery] string idioma = "pt")
         {
+            if (input.IdiomaId == 0)
+            {
+                var idiomaId = await ResolverIdiomaId(idioma);
+                if (idiomaId == null) return BadRequest($"Idioma '{idioma}' não existe.");
+                input.IdiomaId = idiomaId.Value;
+            }
+
             input.Slug = SlugHelper.Slugify(input.Titulo);
             _context.CatecismoPtTopicos.Add(input);
             await _context.SaveChangesAsync();

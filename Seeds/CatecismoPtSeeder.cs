@@ -12,21 +12,29 @@ public static class CatecismoPtSeeder
 
     public static async Task SeedAsync(AppDbContext db)
     {
-        var count = await db.CatecismoPtTopicos.CountAsync();
+        // A tabela CatecismoPtTopicos/CatecismosPt passou a ser genérica (todos os idiomas);
+        // esta contagem e a limpeza de "dados incompletos" abaixo têm de ficar sempre
+        // limitadas ao idioma Português, para nunca tocar em conteúdo migrado de outros idiomas.
+        var idiomaPtId = await db.Idiomas.Where(i => i.Codigo == "pt").Select(i => i.Id).FirstOrDefaultAsync();
+        if (idiomaPtId == 0) return;
+
+        var count = await db.CatecismoPtTopicos.CountAsync(t => t.IdiomaId == idiomaPtId);
         if (count >= TotalTopicos) return;
 
         // Dados incompletos — limpar e re-inserir respeitando FK (filhos antes de pais)
         if (count > 0)
         {
             Console.WriteLine($"→ Catecismo PT incompleto ({count}/{TotalTopicos} tópicos). A reseeder...");
-            db.CatecismosPt.RemoveRange(db.CatecismosPt);
+            var entradasPt = await db.CatecismosPt.Where(c => c.IdiomaId == idiomaPtId).ToListAsync();
+            db.CatecismosPt.RemoveRange(entradasPt);
             await db.SaveChangesAsync();
 
-            var subtopicos = await db.CatecismoPtTopicos.Where(t => t.ParentId != null).ToListAsync();
-            db.CatecismoPtTopicos.RemoveRange(subtopicos);
+            var subtopicosPt = await db.CatecismoPtTopicos.Where(t => t.IdiomaId == idiomaPtId && t.ParentId != null).ToListAsync();
+            db.CatecismoPtTopicos.RemoveRange(subtopicosPt);
             await db.SaveChangesAsync();
 
-            db.CatecismoPtTopicos.RemoveRange(db.CatecismoPtTopicos);
+            var topicosPtRestantes = await db.CatecismoPtTopicos.Where(t => t.IdiomaId == idiomaPtId).ToListAsync();
+            db.CatecismoPtTopicos.RemoveRange(topicosPtRestantes);
             await db.SaveChangesAsync();
         }
 
@@ -35,14 +43,22 @@ public static class CatecismoPtSeeder
         foreach (var topico in topicos)
         {
             topico.Slug = SlugHelper.Slugify(topico.Titulo);
+            topico.IdiomaId = idiomaPtId;
             foreach (var sub in topico.SubTopicos)
             {
                 sub.Slug = SlugHelper.Slugify(sub.Titulo);
+                sub.IdiomaId = idiomaPtId;
                 foreach (var entrada in sub.CatecismosPt)
+                {
                     entrada.Slug = SlugHelper.Slugify(entrada.Titulo);
+                    entrada.IdiomaId = idiomaPtId;
+                }
             }
             foreach (var entrada in topico.CatecismosPt)
+            {
                 entrada.Slug = SlugHelper.Slugify(entrada.Titulo);
+                entrada.IdiomaId = idiomaPtId;
+            }
 
             db.CatecismoPtTopicos.Add(topico);
         }
