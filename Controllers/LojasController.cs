@@ -265,6 +265,66 @@ namespace MissaoBackend.Controllers
             return NoContent();
         }
 
+        // DELETE /api/lojas/eu — a própria loja pede a eliminação da sua conta e dados
+        // (exigido pela App Store, Diretriz 5.1.1(v): quem cria conta tem de conseguir
+        // eliminá-la a partir da app, sem depender de suporte/email).
+        //
+        // Sem histórico de encomendas: elimina tudo definitivamente (loja e produtos).
+        // Com histórico: não pode apagar as linhas ligadas a encomendas já feitas
+        // (ficariam órfãs), por isso anonimiza todos os dados pessoais e desativa a
+        // conta — deixa de conseguir entrar e deixa de aparecer para compradores,
+        // mas o registo contabilístico das vendas passadas mantém-se, sem identificar
+        // a loja. Uma desativação sozinha (sem apagar/anonimizar dados) não cumpre a
+        // diretriz, por isso os dados pessoais são sempre removidos aqui.
+        [HttpDelete("eu")]
+        [Authorize(Policy = "Loja")]
+        public async Task<IActionResult> EliminarContaPropria()
+        {
+            var loja = await _db.Lojas
+                .Include(l => l.FormasPagamento)
+                .FirstOrDefaultAsync(l => l.Id == LojaIdAtual);
+            if (loja == null) return NotFound();
+
+            var produtoIds = await _db.Produtos.Where(p => p.LojaId == loja.Id).Select(p => p.Id).ToListAsync();
+            var temEncomendas = await _db.Encomendas.AnyAsync(e => e.LojaId == loja.Id)
+                || (produtoIds.Count > 0 && await _db.ItensEncomenda.AnyAsync(i => produtoIds.Contains(i.ProdutoId)));
+
+            if (!temEncomendas)
+            {
+                if (produtoIds.Count > 0)
+                {
+                    var produtos = await _db.Produtos.Where(p => produtoIds.Contains(p.Id)).ToListAsync();
+                    _db.Produtos.RemoveRange(produtos);
+                }
+                _db.Lojas.Remove(loja);
+                await _db.SaveChangesAsync();
+                return NoContent();
+            }
+
+            _db.FormasPagamentoLoja.RemoveRange(loja.FormasPagamento);
+            loja.Nome = "Conta eliminada";
+            loja.Email = $"eliminada-{loja.Id}-{Guid.NewGuid():N}@ndatava.invalid";
+            loja.Password = PasswordHasher.Hash(Guid.NewGuid().ToString());
+            loja.Telefone = null;
+            loja.Morada = null;
+            loja.Descricao = null;
+            loja.InfoPagamento = null;
+            loja.Categoria = null;
+            loja.Latitude = 0;
+            loja.Longitude = 0;
+            loja.Aprovada = false;
+            loja.Ativa = false;
+
+            if (produtoIds.Count > 0)
+            {
+                var produtos = await _db.Produtos.Where(p => produtoIds.Contains(p.Id)).ToListAsync();
+                foreach (var p in produtos) p.Disponivel = false;
+            }
+
+            await _db.SaveChangesAsync();
+            return NoContent();
+        }
+
         // ── Moderação pelo Gestor ────────────────────────────────────────────
 
         [HttpGet("admin")]
