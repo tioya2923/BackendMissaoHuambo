@@ -2,6 +2,7 @@ using MissaoBackend.Data;
 using MissaoBackend.Models;
 using MissaoBackend.Utils;
 using Microsoft.EntityFrameworkCore;
+using System.Text.RegularExpressions;
 
 namespace MissaoBackend.Seeds;
 
@@ -21,30 +22,211 @@ public static class CanticoPtSeeder
             t => t.Id
         );
 
-        var existingSlugs = (await db.Canticos.Where(c => c.IdiomaId == idiomaPtId).Select(c => c.Slug).ToListAsync()).ToHashSet();
+        var existing = await db.Canticos
+            .Where(c => c.IdiomaId == idiomaPtId)
+            .ToDictionaryAsync(c => c.Slug);
 
-        var novos = GetCanticos()
+        var kyrieId = topicoByNome.GetValueOrDefault("kyrie");
+        var invalidKyrie = existing.Values
+            .Where(c => c.TopicoId == kyrieId
+                && (c.Titulo.Equals("J. Ferreira", StringComparison.OrdinalIgnoreCase)
+                    || c.Titulo.Equals("Música: Pe. Zé Lauro", StringComparison.OrdinalIgnoreCase)
+                    || c.Titulo.StartsWith("- CD 3,", StringComparison.OrdinalIgnoreCase)
+                    || c.Titulo.StartsWith("A. Lázaro", StringComparison.OrdinalIgnoreCase)
+                    || c.Titulo.StartsWith("(CD Santo", StringComparison.OrdinalIgnoreCase)))
+            .ToList();
+        db.Canticos.RemoveRange(invalidKyrie);
+        foreach (var item in invalidKyrie)
+            existing.Remove(item.Slug);
+
+        var canticosBase = GetCanticos();
+        var dados = canticosBase
+            .Concat(LoadEntradaCanticos(canticosBase.Select(c => c.Titulo)))
+            .Concat(LoadCanticosFile("kyrie.txt", "kyrie", canticosBase.Select(c => c.Titulo)))
             .Where(c => topicoByNome.ContainsKey(c.TopicoNome))
-            .Select(c => new { Data = c, Slug = SlugHelper.Slugify(c.Titulo) })
-            .Where(x => !existingSlugs.Contains(x.Slug))
+            .Select(c => new { Data = c with { Titulo = NormalizeTitulo(c.Titulo) }, Slug = SlugHelper.Slugify(NormalizeTitulo(c.Titulo)) })
+            .GroupBy(x => x.Slug)
+            .Select(x => x.First())
+            .ToList();
+
+        var novos = dados
+            .Where(x => !existing.ContainsKey(x.Slug))
             .Select(x => new Cantico
             {
                 Titulo = x.Data.Titulo,
                 Slug = x.Slug,
                 Letra = x.Data.Letra,
+                Autor = NormalizeAutor(x.Data.Autor),
                 TopicoId = topicoByNome[x.Data.TopicoNome],
                 IdiomaId = idiomaPtId
             })
             .ToList();
 
-        if (novos.Count == 0) return;
+        var atualizados = 0;
+        foreach (var item in dados.Where(x => existing.ContainsKey(x.Slug)))
+        {
+            var atual = existing[item.Slug];
+            var letraCompleta = atual.Letra != item.Data.Letra;
+            var autorNormalizado = NormalizeAutor(item.Data.Autor);
+            var autorEmFalta = atual.Autor != autorNormalizado && !string.IsNullOrWhiteSpace(autorNormalizado);
+
+            if (!letraCompleta && !autorEmFalta) continue;
+
+            if (letraCompleta) atual.Letra = item.Data.Letra;
+            if (autorEmFalta) atual.Autor = autorNormalizado;
+            atualizados++;
+        }
+
+        foreach (var atual in existing.Values)
+        {
+            var autorNormalizado = NormalizeAutor(atual.Autor);
+            if (atual.Autor == autorNormalizado) continue;
+            atual.Autor = autorNormalizado;
+            atualizados++;
+        }
+
+        if (novos.Count == 0 && atualizados == 0) return;
 
         db.Canticos.AddRange(novos);
         await db.SaveChangesAsync();
-        Console.WriteLine($"✓ {novos.Count} cânticos PT adicionados.");
+        Console.WriteLine($"✓ {novos.Count} cânticos PT adicionados, {atualizados} atualizados.");
     }
 
-    private record CanticoData(string Titulo, string Letra, string TopicoNome);
+    private record CanticoData(string Titulo, string Letra, string TopicoNome, string? Autor = null);
+
+    private static IEnumerable<CanticoData> LoadEntradaCanticos(IEnumerable<string>? reservedTitles = null)
+    {
+        return LoadCanticosFile("entrada.txt", "entrada", reservedTitles);
+    }
+
+    private static IEnumerable<CanticoData> LoadCanticosFile(string fileName, string topicoNome, IEnumerable<string>? reservedTitles = null)
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, fileName);
+        if (!File.Exists(path)) return Enumerable.Empty<CanticoData>();
+
+        var text = File.ReadAllText(path);
+        var starts = Regex.Matches(text, @"(?m)^\s*\d{1,3}\s*(?:\t+|\s+)\(Tom:");
+        var result = new List<CanticoData>();
+        var titles = new HashSet<string>(reservedTitles ?? Enumerable.Empty<string>(), StringComparer.OrdinalIgnoreCase);
+
+        for (var index = 0; index < starts.Count; index++)
+        {
+            var start = starts[index].Index;
+            var end = index + 1 < starts.Count ? starts[index + 1].Index : text.Length;
+            var block = text[start..end].Trim();
+            var firstVerse = Regex.Match(block, @"(?m)^\s*1\s*-");
+            var prefixEnd = firstVerse.Success ? firstVerse.Index : block.Length;
+            var prefix = block[..prefixEnd];
+            var headerEnd = FindHeaderEnd(prefix);
+            if (headerEnd < 0) headerEnd = 0;
+
+            var metadata = block[..Math.Min(headerEnd + 1, block.Length)];
+            var letra = block[Math.Min(headerEnd + 1, block.Length)..].Trim();
+            var autor = ExtractAutor(metadata);
+
+            var titleLine = FindTitleLine(block, letra);
+            if (titleLine is null || Regex.IsMatch(titleLine, @"^(?:Letra(?: e Música)?\s*:|Música\s*:|Versão\s*:|Adaptação\s*:|Texto adap\.)", RegexOptions.IgnoreCase))
+            {
+                var numberedVerse = Regex.Match(block, @"(?m)^\s*\d+\s*-\s*(.+)$");
+                if (numberedVerse.Success)
+                    titleLine = numberedVerse.Groups[1].Value;
+                else if (block.Contains("Kyrie eleison!", StringComparison.OrdinalIgnoreCase))
+                    titleLine = "Kyrie eleison!";
+            }
+            if (titleLine is null) continue;
+
+            var titulo = Regex.Replace(titleLine, @"^\d+\s*[-\t]\s*", "");
+            titulo = titulo.Split(" /", StringSplitOptions.None)[0];
+            titulo = Regex.Replace(titulo, @"\s*\(\d+x\)\s*", "", RegexOptions.IgnoreCase);
+            titulo = titulo.Trim(' ', '"', '“', '”', ',', '.', ';', ':');
+            if (titulo.Equals("Oh! vem cantar comigo, irmão", StringComparison.OrdinalIgnoreCase))
+                titulo = "Jesus está vivo, é Rei vencedor";
+            if (string.IsNullOrWhiteSpace(titulo) || titulo.StartsWith("/", StringComparison.Ordinal) || string.IsNullOrWhiteSpace(letra)) continue;
+
+            var tituloBase = titulo;
+            var repeticao = 2;
+            while (!titles.Add(titulo))
+                titulo = $"{tituloBase} ({repeticao++})";
+
+            result.Add(new CanticoData(titulo, letra, topicoNome, autor));
+        }
+
+        return result;
+    }
+
+    private static string? FindTitleLine(string block, string letra)
+    {
+        var lines = block.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        foreach (var line in lines)
+        {
+            if (line.StartsWith("(Tom:", StringComparison.OrdinalIgnoreCase))
+            {
+                var closingParenthesis = line.LastIndexOf(')');
+                if (closingParenthesis >= 0 && closingParenthesis + 1 < line.Length)
+                {
+                    var inlineTitle = line[(closingParenthesis + 1)..].Trim();
+                    if (!Regex.IsMatch(inlineTitle, @"^(?:Letra|Música|Versão|Adaptação)", RegexOptions.IgnoreCase))
+                        return inlineTitle;
+                }
+            }
+            if (Regex.IsMatch(line, @"^(?:\d{1,3}\s*\(Tom:|Letra(?: e Música)?\s*:|Música\s*:|Versão(?: e Música)?\s*:|Adaptação\s*:|Texto adap\.|DR\s*$|\(Cantai)", RegexOptions.IgnoreCase))
+                continue;
+            if (line.StartsWith("- CD ", StringComparison.OrdinalIgnoreCase)
+                || line.StartsWith("A. Lázaro", StringComparison.OrdinalIgnoreCase)
+                || line.StartsWith("J. Ferreira", StringComparison.OrdinalIgnoreCase)
+                || line.StartsWith("(CD ", StringComparison.OrdinalIgnoreCase)
+                || line.StartsWith("/ CD ", StringComparison.OrdinalIgnoreCase))
+                continue;
+            if (Regex.IsMatch(line, @"^\d+\s*-")) return line;
+            if (!line.StartsWith("/", StringComparison.Ordinal)) return line;
+        }
+
+        if (block.Contains("Kyrie eleison!", StringComparison.OrdinalIgnoreCase))
+            return "Kyrie eleison!";
+        return letra.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault();
+    }
+
+    private static int FindHeaderEnd(string prefix)
+    {
+        var sourceStart = prefix.IndexOf("(Cantai", StringComparison.OrdinalIgnoreCase);
+        if (sourceStart < 0) return prefix.LastIndexOf(')');
+
+        var depth = 0;
+        for (var index = sourceStart; index < prefix.Length; index++)
+        {
+            if (prefix[index] == '(') depth++;
+            if (prefix[index] != ')' || --depth != 0) continue;
+            return index;
+        }
+
+        return prefix.LastIndexOf(')');
+    }
+
+    private static string? ExtractAutor(string metadata)
+    {
+        var match = Regex.Match(metadata, @"(?:Letra e Música|Letra|Música|Versão e Música|Versão|Adaptação|Texto adap\.|DR)\s*:?.*$", RegexOptions.Singleline);
+        if (!match.Success) return null;
+
+        var autor = Regex.Replace(match.Value, @"\s+", " ").Trim();
+        return autor.Length == 0 ? null : autor;
+    }
+
+    private static string? NormalizeAutor(string? autor)
+    {
+        if (string.IsNullOrWhiteSpace(autor)) return null;
+
+        autor = Regex.Replace(autor, @"\s*\([^)]*\)", "");
+        autor = Regex.Replace(autor, @"^\s*(?:Letra e Música|Letra|Música|Versão e Música|Versão|Adaptação|Texto adap\.)\s*:\s*", "", RegexOptions.IgnoreCase);
+        autor = Regex.Replace(autor, @"\s+", " ").Trim();
+        return autor.Length == 0 ? null : autor;
+    }
+
+    private static string NormalizeTitulo(string titulo)
+    {
+        titulo = Regex.Replace(titulo, @"\s*\(\d+x\)\s*", "", RegexOptions.IgnoreCase);
+        titulo = titulo.Trim(' ', '"', '“', '”', ',', '.', ';', ':');
+        return titulo.Length <= 180 ? titulo : titulo[..180].TrimEnd();
+    }
 
     private static List<CanticoData> GetCanticos() => new()
     {

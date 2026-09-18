@@ -7,6 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Include="..\entrada.txt" Link="entrada.txt" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\kyrie.txt" Link="kyrie.txt" CopyToOutputDirectory="PreserveNewest" />
+
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
     <PackageReference Include="DotNetEnv" Version="3.1.1" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.0">
