@@ -55,13 +55,10 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<Idioma>().HasData(
             new Idioma { Id = 1, Codigo = "pt", Nome = "Português", Ordem = 1, Ativo = true },
-            new Idioma { Id = 2, Codigo = "umb", Nome = "Umbundu", Ordem = 2, Ativo = true },            
-            new Idioma { Id = 3, Codigo = "kmb", Nome = "Kimbundu", Ordem = 3, Ativo = true },
-            new Idioma { Id = 4, Codigo = "otc", Nome = "Oshikwanhama", Ordem = 4, Ativo = true },
-            new Idioma { Id = 5, Codigo = "tch", Nome = "Tchokwe", Ordem = 5, Ativo = true },
-            new Idioma { Id = 6, Codigo = "nga", Nome = "Nganguela", Ordem = 6, Ativo = true },
-            new Idioma { Id = 7, Codigo = "kik", Nome = "Kikongo", Ordem = 7, Ativo = true },           
-            new Idioma { Id = 8, Codigo = "lat", Nome = "Latim", Ordem = 8, Ativo = true }
+            new Idioma { Id = 2, Codigo = "umb", Nome = "Umbundu", Ordem = 2, Ativo = true },
+            new Idioma { Id = 3, Codigo = "lat", Nome = "Latim", Ordem = 3, Ativo = true },
+            new Idioma { Id = 4, Codigo = "kmb", Nome = "Kimbundu", Ordem = 4, Ativo = true },
+            new Idioma { Id = 5, Codigo = "otc", Nome = "Otchikwanyama", Ordem = 5, Ativo = true }
         );
 
         // Topico/Cantico (Português) passam a ser as tabelas genéricas multi-idioma;
