@@ -24,7 +24,7 @@ namespace MissaoBackend.Controllers
 
         /// <summary>
         /// Migra os cânticos/tópicos e o catecismo/orações de Umbundu, Latim, Kimbundu
-        /// e Otchikwanyama das tabelas antigas (uma por idioma) para as tabelas genéricas
+        /// e Oshikwanhama das tabelas antigas (uma por idioma) para as tabelas genéricas
         /// Topico/Cantico e CatecismoPtTopico/CatecismoPt, marcando cada linha com o
         /// IdiomaId correto. As tabelas antigas NÃO são apagadas nem alteradas — ficam
         /// como cópia de segurança até se confirmar que tudo está correto.
@@ -43,10 +43,10 @@ namespace MissaoBackend.Controllers
             resultado["canticosLatim"] = await MigrarCanticos("lat");
             resultado["canticosKimbundu"] = await MigrarCanticos("kmb");
 
-            // ── Catecismo/Orações: Umbundu, Latim, Otchikwanyama ────────────
+            // ── Catecismo/Orações: Umbundu, Latim, Oshikwanhama ────────────
             resultado["catecismoUmbundu"] = await MigrarCatecismoUmb();
             resultado["catecismoLatim"] = await MigrarCatecismoLat();
-            resultado["catecismoOtchikwanyama"] = await MigrarCatecismoOtc();
+            resultado["catecismoOshikwanhama"] = await MigrarCatecismoOtc();
 
             await transacao.CommitAsync();
 

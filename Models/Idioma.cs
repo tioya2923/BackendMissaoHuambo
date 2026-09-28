@@ -1,7 +1,7 @@
 namespace MissaoBackend.Models;
 
 /// <summary>
-/// Um idioma disponível na app (Português, Umbundu, Latim, Kimbundu, Otchikwanyama, ...).
+/// Um idioma disponível na app (Português, Umbundu, Latim, Kimbundu, Oshikwanhama, ...).
 /// Cânticos, tópicos de cânticos, catecismo/orações e tópicos de catecismo referenciam
 /// um Idioma através de IdiomaId, em vez de existir uma tabela por idioma.
 /// </summary>

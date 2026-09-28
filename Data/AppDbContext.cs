@@ -58,7 +58,7 @@ public class AppDbContext : DbContext
             new Idioma { Id = 2, Codigo = "umb", Nome = "Umbundu", Ordem = 2, Ativo = true },
             new Idioma { Id = 3, Codigo = "lat", Nome = "Latim", Ordem = 3, Ativo = true },
             new Idioma { Id = 4, Codigo = "kmb", Nome = "Kimbundu", Ordem = 4, Ativo = true },
-            new Idioma { Id = 5, Codigo = "otc", Nome = "Otchikwanyama", Ordem = 5, Ativo = true }
+            new Idioma { Id = 5, Codigo = "otc", Nome = "Oshikwanhama", Ordem = 5, Ativo = true }
         );
 
         // Topico/Cantico (Português) passam a ser as tabelas genéricas multi-idioma;
