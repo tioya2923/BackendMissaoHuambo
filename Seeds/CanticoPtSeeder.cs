@@ -14,6 +14,21 @@ public static class CanticoPtSeeder
         if (idiomaPtId == 0) return;
 
         var topicoList = await db.Topicos.Where(t => t.IdiomaId == idiomaPtId).ToListAsync();
+        var gloria = topicoList.FirstOrDefault(t =>
+            t.Nome.Equals("Glória", StringComparison.OrdinalIgnoreCase)
+            || t.Slug.Equals("Gloria", StringComparison.OrdinalIgnoreCase));
+        if (gloria is null)
+        {
+            gloria = new Topico
+            {
+                Nome = "Glória",
+                Slug = "Gloria",
+                IdiomaId = idiomaPtId
+            };
+            db.Topicos.Add(gloria);
+            await db.SaveChangesAsync();
+            topicoList.Add(gloria);
+        }
         if (!topicoList.Any()) return;
 
         // Case-insensitive match on topic name (slugs in DB have inconsistent formatting)
@@ -43,6 +58,7 @@ public static class CanticoPtSeeder
         var dados = canticosBase
             .Concat(LoadEntradaCanticos(canticosBase.Select(c => c.Titulo)))
             .Concat(LoadCanticosFile("kyrie.txt", "kyrie", canticosBase.Select(c => c.Titulo)))
+            .Concat(LoadCanticosFile("gloria.txt", "glória", canticosBase.Select(c => c.Titulo)))
             .Where(c => topicoByNome.ContainsKey(c.TopicoNome))
             .Select(c => new { Data = c with { Titulo = NormalizeTitulo(c.Titulo) }, Slug = SlugHelper.Slugify(NormalizeTitulo(c.Titulo)) })
             .GroupBy(x => x.Slug)
