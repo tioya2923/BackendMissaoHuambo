@@ -9,12 +9,13 @@
   <!-- Ficheiros de importação opcionais para o CanticoPtSeeder (ver Seeds/CanticoPtSeeder.cs).
        Nunca fazem parte do repositório (dados de origem só locais) — a condição evita que a
        compilação falhe quando não existem, como acontece em qualquer checkout novo ou no Render. -->
-  <ItemGroup Condition="Exists('..\entrada.txt') Or Exists('..\kyrie.txt') Or Exists('..\gloria.txt') Or Exists('..\intro.txt') Or Exists('..\aleluia.txt')">
+  <ItemGroup Condition="Exists('..\entrada.txt') Or Exists('..\kyrie.txt') Or Exists('..\gloria.txt') Or Exists('..\intro.txt') Or Exists('..\aleluia.txt') Or Exists('..\ofert.txt')">
     <Content Include="..\entrada.txt" Link="entrada.txt" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\entrada.txt')" />
     <Content Include="..\kyrie.txt" Link="kyrie.txt" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\kyrie.txt')" />
     <Content Include="..\gloria.txt" Link="gloria.txt" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\gloria.txt')" />
     <Content Include="..\intro.txt" Link="intro.txt" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\intro.txt')" />
     <Content Include="..\aleluia.txt" Link="aleluia.txt" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\aleluia.txt')" />
+    <Content Include="..\ofert.txt" Link="ofert.txt" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\ofert.txt')" />
   </ItemGroup>
 
   <ItemGroup>

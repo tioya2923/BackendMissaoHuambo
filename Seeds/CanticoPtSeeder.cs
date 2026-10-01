@@ -29,6 +29,22 @@ public static class CanticoPtSeeder
             await db.SaveChangesAsync();
             topicoList.Add(gloria);
         }
+
+        var ofertorio = topicoList.FirstOrDefault(t =>
+            t.Nome.Equals("Ofertório", StringComparison.OrdinalIgnoreCase)
+            || t.Slug.Equals("Ofertorio", StringComparison.OrdinalIgnoreCase));
+        if (ofertorio is null)
+        {
+            ofertorio = new Topico
+            {
+                Nome = "Ofertório",
+                Slug = "Ofertorio",
+                IdiomaId = idiomaPtId
+            };
+            db.Topicos.Add(ofertorio);
+            await db.SaveChangesAsync();
+            topicoList.Add(ofertorio);
+        }
         if (!topicoList.Any()) return;
 
         // Case-insensitive match on topic name (slugs in DB have inconsistent formatting)
@@ -61,6 +77,7 @@ public static class CanticoPtSeeder
             .Concat(LoadCanticosFile("gloria.txt", "glória", canticosBase.Select(c => c.Titulo)))
             .Concat(LoadCanticosFile("intro.txt", "entronização da palavra", canticosBase.Select(c => c.Titulo)))
             .Concat(LoadAleluiaCanticos(canticosBase.Select(c => c.Titulo)))
+            .Concat(LoadOfertorioCanticos(canticosBase.Select(c => c.Titulo)))
             .Where(c => topicoByNome.ContainsKey(c.TopicoNome))
             .Select(c => new { Data = c with { Titulo = NormalizeTitulo(c.Titulo) }, Slug = SlugHelper.Slugify(NormalizeTitulo(c.Titulo)) })
             .ToList();
@@ -183,6 +200,79 @@ public static class CanticoPtSeeder
 
         Console.WriteLine($"Aleluia fonte: {result.Count}/{starts.Count} blocos processados.");
         return result;
+    }
+
+    private static IEnumerable<CanticoData> LoadOfertorioCanticos(IEnumerable<string>? reservedTitles = null)
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "ofert.txt");
+        if (!File.Exists(path)) return Enumerable.Empty<CanticoData>();
+
+        var text = File.ReadAllText(path);
+        var starts = Regex.Matches(text, @"(?m)^\s*(?:3\d{2}|4[01]\d)\s+(?=(?:Letra|Música|Versão|Adaptação|DR\b))");
+        var titles = new HashSet<string>(reservedTitles ?? Enumerable.Empty<string>(), StringComparer.OrdinalIgnoreCase);
+        var result = new List<CanticoData>();
+
+        for (var index = 0; index < starts.Count; index++)
+        {
+            var end = index + 1 < starts.Count ? starts[index + 1].Index : text.Length;
+            var block = text[starts[index].Index..end].Trim();
+            var lines = block.Split('\n');
+            if (lines.Length == 0) continue;
+
+            var header = Regex.Replace(lines[0].Trim(), @"^(?:3\d{2}|4[01]\d)\s+", "").Trim();
+            var creditAndInlineLyrics = SplitOfertorioHeader(header);
+            var autor = NormalizeAutor(ExtractAutor(creditAndInlineLyrics.Credits));
+            var lyricLines = new List<string>();
+            if (!string.IsNullOrWhiteSpace(creditAndInlineLyrics.InlineLyrics))
+                lyricLines.Add(creditAndInlineLyrics.InlineLyrics);
+            lyricLines.AddRange(lines.Skip(1).Select(line => line.TrimEnd()));
+
+            var letra = string.Join(Environment.NewLine, lyricLines).Trim();
+            if (string.IsNullOrWhiteSpace(letra)) continue;
+
+            var tituloLinha = lyricLines.FirstOrDefault(line => !string.IsNullOrWhiteSpace(line));
+            if (tituloLinha is null) continue;
+            var titulo = Regex.Replace(tituloLinha.Trim(), @"^\d+\s*[-.]\s*", "");
+            titulo = titulo.Split(" /", StringSplitOptions.None)[0];
+            titulo = Regex.Replace(titulo, @"\s*\((?:bis|\d+x)\)\s*$", "", RegexOptions.IgnoreCase);
+            titulo = NormalizeTitulo(titulo);
+            if (string.IsNullOrWhiteSpace(titulo)) continue;
+
+            var tituloBase = titulo;
+            var repeticao = 2;
+            while (!titles.Add(titulo)) titulo = $"{tituloBase} ({repeticao++})";
+            result.Add(new CanticoData(titulo, letra, "ofertório", autor));
+        }
+
+        Console.WriteLine($"Ofertório fonte: {result.Count}/{starts.Count} blocos processados.");
+        return result;
+    }
+
+    private static (string Credits, string InlineLyrics) SplitOfertorioHeader(string header)
+    {
+        var creditPrefix = Regex.Match(header, @"^(?:Letra(?: e Música)?|Música|Versão(?: e Música)?|Adaptação e Música|Adaptação|Folcmúsica|DR)\b", RegexOptions.IgnoreCase);
+        if (!creditPrefix.Success) return (string.Empty, header);
+
+        var sourceStart = header.IndexOf("(CD ", StringComparison.OrdinalIgnoreCase);
+        if (sourceStart >= 0)
+        {
+            var close = header.LastIndexOf(')');
+            if (close > sourceStart && close + 1 < header.Length)
+            {
+                var inline = header[(close + 1)..].Trim();
+                if (!string.IsNullOrWhiteSpace(inline)) return (header[..(close + 1)], inline);
+            }
+        }
+
+        var separator = Regex.Match(header, @"\s{2,}(?=\S)");
+        if (separator.Success)
+        {
+            var inline = header[(separator.Index + separator.Length)..].Trim();
+            if (!Regex.IsMatch(inline, @"^(?:-\s*CD|CD\s|Paulinas\b|Paulus\b)", RegexOptions.IgnoreCase))
+                return (header[..separator.Index].Trim(), inline);
+        }
+
+        return (header, string.Empty);
     }
 
     private static string ExtractInlineLyrics(string header, out bool hasAuthorHeader)
