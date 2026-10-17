@@ -40,6 +40,11 @@ public class AppDbContext : DbContext
     public DbSet<BloqueioUtilizador> BloqueiosUtilizador => Set<BloqueioUtilizador>();
     public DbSet<DenunciaPartilha> DenunciasPartilha => Set<DenunciaPartilha>();
     public DbSet<ContactoUtilizador> ContactosUtilizador => Set<ContactoUtilizador>();
+    public DbSet<Grupo> Grupos => Set<Grupo>();
+    public DbSet<MembroGrupo> MembrosGrupo => Set<MembroGrupo>();
+    public DbSet<PublicacaoGrupo> PublicacoesGrupo => Set<PublicacaoGrupo>();
+    public DbSet<PublicacaoAudio> PublicacoesAudio => Set<PublicacaoAudio>();
+    public DbSet<VistoPublicacao> VistosPublicacao => Set<VistoPublicacao>();
     public DbSet<FormaApoio> FormasApoio => Set<FormaApoio>();
 
     public DbSet<Produto> Produtos => Set<Produto>();
@@ -290,6 +295,49 @@ public class AppDbContext : DbContext
             e.HasOne<Utilizador>().WithMany().HasForeignKey(b => b.UtilizadorId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne<Utilizador>().WithMany().HasForeignKey(b => b.BloqueadoId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(b => new { b.UtilizadorId, b.BloqueadoId }).IsUnique();
+        });
+
+        modelBuilder.Entity<Grupo>(e =>
+        {
+            e.HasOne<Utilizador>().WithMany().HasForeignKey(g => g.CriadoPorId).OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(g => g.Codigo).IsUnique();
+            e.Property(g => g.Nome).HasMaxLength(100);
+            e.Property(g => g.Tipo).HasMaxLength(20);
+            e.Property(g => g.Descricao).HasMaxLength(500);
+            e.Property(g => g.Paroquia).HasMaxLength(100);
+            e.Property(g => g.Codigo).HasMaxLength(20);
+        });
+
+        modelBuilder.Entity<MembroGrupo>(e =>
+        {
+            e.HasOne<Grupo>().WithMany().HasForeignKey(m => m.GrupoId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Utilizador>().WithMany().HasForeignKey(m => m.UtilizadorId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(m => new { m.GrupoId, m.UtilizadorId }).IsUnique();
+        });
+
+        modelBuilder.Entity<PublicacaoGrupo>(e =>
+        {
+            e.HasOne<Grupo>().WithMany().HasForeignKey(p => p.GrupoId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Utilizador>().WithMany().HasForeignKey(p => p.AutorId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(p => new { p.GrupoId, p.CriadoEm });
+            e.Property(p => p.Titulo).HasMaxLength(200);
+            e.Property(p => p.Tipo).HasMaxLength(20);
+            e.Property(p => p.Texto).HasColumnType("LONGTEXT");
+            e.Property(p => p.ItensJson).HasColumnType("LONGTEXT");
+        });
+
+        modelBuilder.Entity<PublicacaoAudio>(e =>
+        {
+            e.HasOne<PublicacaoGrupo>().WithMany().HasForeignKey(a => a.PublicacaoId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<AudioPartilha>().WithMany().HasForeignKey(a => a.AudioId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(a => new { a.PublicacaoId, a.AudioId }).IsUnique();
+        });
+
+        modelBuilder.Entity<VistoPublicacao>(e =>
+        {
+            e.HasOne<PublicacaoGrupo>().WithMany().HasForeignKey(v => v.PublicacaoId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Utilizador>().WithMany().HasForeignKey(v => v.UtilizadorId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(v => new { v.PublicacaoId, v.UtilizadorId }).IsUnique();
         });
 
         modelBuilder.Entity<ContactoUtilizador>(e =>

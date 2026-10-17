@@ -702,6 +702,57 @@ namespace MissaoBackend.Migrations
                     b.ToTable("Gestores");
                 });
 
+            modelBuilder.Entity("MissaoBackend.Models.Grupo", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<bool>("CodigoActivo")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("CriadoPorId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Descricao")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<bool>("MembrosPublicam")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<string>("Paroquia")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Codigo")
+                        .IsUnique();
+
+                    b.HasIndex("CriadoPorId");
+
+                    b.ToTable("Grupos");
+                });
+
             modelBuilder.Entity("MissaoBackend.Models.Idioma", b =>
                 {
                     b.Property<int>("Id")
@@ -868,6 +919,43 @@ namespace MissaoBackend.Migrations
                     b.ToTable("Lojas");
                 });
 
+            modelBuilder.Entity("MissaoBackend.Models.MembroGrupo", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<bool>("Administrador")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("EntrouEm")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("Estado")
+                        .HasColumnType("int");
+
+                    b.Property<int>("GrupoId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UltimaLeituraId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UtilizadorId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UtilizadorId");
+
+                    b.HasIndex("GrupoId", "UtilizadorId")
+                        .IsUnique();
+
+                    b.ToTable("MembrosGrupo");
+                });
+
             modelBuilder.Entity("MissaoBackend.Models.PartilhaCantico", b =>
                 {
                     b.Property<int>("Id")
@@ -956,6 +1044,78 @@ namespace MissaoBackend.Migrations
                     b.HasIndex("LojaId");
 
                     b.ToTable("Produtos");
+                });
+
+            modelBuilder.Entity("MissaoBackend.Models.PublicacaoAudio", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<int>("AudioId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PublicacaoId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AudioId");
+
+                    b.HasIndex("PublicacaoId", "AudioId")
+                        .IsUnique();
+
+                    b.ToTable("PublicacoesAudio");
+                });
+
+            modelBuilder.Entity("MissaoBackend.Models.PublicacaoGrupo", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<int>("AutorId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("EditadoEm")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("Fixada")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<int>("GrupoId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ItensJson")
+                        .HasColumnType("LONGTEXT");
+
+                    b.Property<string>("Momento")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Texto")
+                        .IsRequired()
+                        .HasColumnType("LONGTEXT");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("Titulo")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AutorId");
+
+                    b.HasIndex("GrupoId", "CriadoEm");
+
+                    b.ToTable("PublicacoesGrupo");
                 });
 
             modelBuilder.Entity("MissaoBackend.Models.Topico", b =>
@@ -1109,6 +1269,31 @@ namespace MissaoBackend.Migrations
                         .IsUnique();
 
                     b.ToTable("Utilizadores");
+                });
+
+            modelBuilder.Entity("MissaoBackend.Models.VistoPublicacao", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<int>("PublicacaoId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UtilizadorId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("VistoEm")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UtilizadorId");
+
+                    b.HasIndex("PublicacaoId", "UtilizadorId")
+                        .IsUnique();
+
+                    b.ToTable("VistosPublicacao");
                 });
 
             modelBuilder.Entity("MissaoBackend.Models.AudioPartilha", b =>
@@ -1306,6 +1491,14 @@ namespace MissaoBackend.Migrations
                     b.Navigation("Loja");
                 });
 
+            modelBuilder.Entity("MissaoBackend.Models.Grupo", b =>
+                {
+                    b.HasOne("MissaoBackend.Models.Utilizador", null)
+                        .WithMany()
+                        .HasForeignKey("CriadoPorId")
+                        .OnDelete(DeleteBehavior.SetNull);
+                });
+
             modelBuilder.Entity("MissaoBackend.Models.ItemEncomenda", b =>
                 {
                     b.HasOne("MissaoBackend.Models.Encomenda", "Encomenda")
@@ -1321,6 +1514,21 @@ namespace MissaoBackend.Migrations
                         .IsRequired();
 
                     b.Navigation("Encomenda");
+                });
+
+            modelBuilder.Entity("MissaoBackend.Models.MembroGrupo", b =>
+                {
+                    b.HasOne("MissaoBackend.Models.Grupo", null)
+                        .WithMany()
+                        .HasForeignKey("GrupoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MissaoBackend.Models.Utilizador", null)
+                        .WithMany()
+                        .HasForeignKey("UtilizadorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("MissaoBackend.Models.PartilhaCantico", b =>
@@ -1354,6 +1562,36 @@ namespace MissaoBackend.Migrations
                     b.Navigation("Loja");
                 });
 
+            modelBuilder.Entity("MissaoBackend.Models.PublicacaoAudio", b =>
+                {
+                    b.HasOne("MissaoBackend.Models.AudioPartilha", null)
+                        .WithMany()
+                        .HasForeignKey("AudioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MissaoBackend.Models.PublicacaoGrupo", null)
+                        .WithMany()
+                        .HasForeignKey("PublicacaoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MissaoBackend.Models.PublicacaoGrupo", b =>
+                {
+                    b.HasOne("MissaoBackend.Models.Utilizador", null)
+                        .WithMany()
+                        .HasForeignKey("AutorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MissaoBackend.Models.Grupo", null)
+                        .WithMany()
+                        .HasForeignKey("GrupoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("MissaoBackend.Models.Topico", b =>
                 {
                     b.HasOne("MissaoBackend.Models.Idioma", "Idioma")
@@ -1363,6 +1601,21 @@ namespace MissaoBackend.Migrations
                         .IsRequired();
 
                     b.Navigation("Idioma");
+                });
+
+            modelBuilder.Entity("MissaoBackend.Models.VistoPublicacao", b =>
+                {
+                    b.HasOne("MissaoBackend.Models.PublicacaoGrupo", null)
+                        .WithMany()
+                        .HasForeignKey("PublicacaoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MissaoBackend.Models.Utilizador", null)
+                        .WithMany()
+                        .HasForeignKey("UtilizadorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("MissaoBackend.Models.CatecismoLatTopico", b =>

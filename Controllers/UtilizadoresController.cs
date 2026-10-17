@@ -302,7 +302,9 @@ public class UtilizadoresController : ControllerBase
         if (id == null) return Unauthorized();
         var u = await _db.Utilizadores.FindAsync(id);
         if (u == null) return NotFound();
-        // Partilhas enviadas e recebidas, gravações e bloqueios desta conta são apagados em cascata.
+        // Entrega a administração dos grupos que ficariam sem administrador (ou apaga-os se ficarem vazios).
+        await GruposRegras.PrepararEliminacaoConta(_db, u.Id);
+        // Partilhas enviadas e recebidas, gravações, contactos e bloqueios desta conta são apagados em cascata.
         _db.Utilizadores.Remove(u);
         await _db.SaveChangesAsync();
         return NoContent();

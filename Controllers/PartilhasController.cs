@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MissaoBackend.Data;
 using MissaoBackend.Models;
+using MissaoBackend.Services;
 
 namespace MissaoBackend.Controllers;
 
@@ -95,7 +96,7 @@ public class PartilhasController : ControllerBase
         // Limpa gravações carregadas e nunca enviadas há mais de um dia.
         var limite = DateTime.UtcNow.AddDays(-1);
         var orfaos = await _db.AudiosPartilha
-            .Where(a => a.DonoId == id && a.CriadoEm < limite && !_db.PartilhasCanticos.Any(p => p.AudioId == a.Id))
+            .Where(a => a.DonoId == id && a.CriadoEm < limite && !_db.PartilhasCanticos.Any(p => p.AudioId == a.Id) && !_db.PublicacoesAudio.Any(p => p.AudioId == a.Id))
             .ToListAsync();
         if (orfaos.Count > 0) _db.AudiosPartilha.RemoveRange(orfaos);
 
@@ -271,16 +272,7 @@ public class PartilhasController : ControllerBase
         return NoContent();
     }
 
-    private async Task LimparAudiosSemUso(List<int> audioIds)
-    {
-        if (audioIds.Count == 0) return;
-        var semUso = await _db.AudiosPartilha
-            .Where(a => audioIds.Contains(a.Id) && !_db.PartilhasCanticos.Any(p => p.AudioId == a.Id))
-            .ToListAsync();
-        if (semUso.Count == 0) return;
-        _db.AudiosPartilha.RemoveRange(semUso);
-        await _db.SaveChangesAsync();
-    }
+    private Task LimparAudiosSemUso(List<int> audioIds) => GruposRegras.LimparAudiosSemUso(_db, audioIds);
 
     // ── Segurança: denunciar e bloquear ──────────────────────────────────────
 
