@@ -82,6 +82,14 @@ public class GruposController : ControllerBase
         }
     }
 
+    // Apaga o grupo quem o criou; se o criador já saiu, qualquer administrador.
+    private async Task<bool> PodeApagar(Grupo g, MembroGrupo meu, int eu)
+    {
+        if (!meu.Administrador) return false;
+        if (g.CriadoPorId == null || g.CriadoPorId == eu) return true;
+        return !await _db.MembrosGrupo.AnyAsync(x => x.GrupoId == g.Id && x.UtilizadorId == g.CriadoPorId && x.Estado == EstadoMembro.Activo);
+    }
+
     private Task<MembroGrupo?> MeuMembro(int grupoId, int eu) =>
         _db.MembrosGrupo.FirstOrDefaultAsync(m => m.GrupoId == grupoId && m.UtilizadorId == eu && m.Estado == EstadoMembro.Activo);
 
@@ -183,6 +191,7 @@ public class GruposController : ControllerBase
             g.Id, g.Nome, g.Tipo, g.Descricao, g.Paroquia, g.MembrosPublicam,
             administrador = m.Administrador,
             criador = g.CriadoPorId == eu,
+            podeApagar = await PodeApagar(g, m, eu.Value),
             // O código só é mostrado a quem administra.
             codigo = m.Administrador ? g.Codigo : null,
             codigoActivo = m.Administrador ? (bool?)g.CodigoActivo : null,
@@ -232,7 +241,7 @@ public class GruposController : ControllerBase
         return Ok(new { codigo = g.Codigo });
     }
 
-    // Só quem criou o grupo o pode apagar (ou qualquer administrador, se o criador já saiu).
+    // Só quem criou o grupo o pode apagar (ou qualquer administrador, se o criador já saiu do grupo).
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Apagar(int id)
     {
@@ -242,7 +251,7 @@ public class GruposController : ControllerBase
         if (m == null) return NotFound();
         var g = await _db.Grupos.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
         if (g == null) return NotFound();
-        if (!m.Administrador || (g.CriadoPorId != null && g.CriadoPorId != eu)) return Forbid();
+        if (!await PodeApagar(g, m, eu.Value)) return Forbid();
         var audios = await GruposRegras.ApagarGrupo(_db, id);
         await GruposRegras.LimparAudiosSemUso(_db, audios);
         return NoContent();
