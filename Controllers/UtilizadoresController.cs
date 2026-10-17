@@ -20,6 +20,11 @@ public class UtilizadoresController : ControllerBase
     private readonly IWebHostEnvironment _env;
     private readonly ArmazenamentoService _armazenamento;
 
+    // Travam adivinhação de palavras-passe (por email) e criação massiva de contas (por endereço).
+    private static readonly LimitadorTentativas FalhasDeLogin = new(8, TimeSpan.FromMinutes(15));
+    private static readonly LimitadorTentativas RegistosPorEndereco = new(
+        int.TryParse(Environment.GetEnvironmentVariable("LIMITE_REGISTOS_HORA"), out var lim) ? lim : 30, TimeSpan.FromHours(1));
+
     public UtilizadoresController(AppDbContext db, IConfiguration config, IWebHostEnvironment env, ArmazenamentoService armazenamento)
     {
         _db = db;
@@ -115,15 +120,23 @@ public class UtilizadoresController : ControllerBase
         var email = req.Email.Trim().ToLower();
         if (!email.Contains('@') || email.Length > 200)
             return BadRequest("Indique um email válido.");
-        if (req.Password.Length < 6)
-            return BadRequest("A palavra-passe deve ter pelo menos 6 caracteres.");
+        if (req.Password.Length < 8)
+            return BadRequest("A palavra-passe deve ter pelo menos 8 caracteres.");
+        if (req.Password.Length > 100)
+            return BadRequest("A palavra-passe é demasiado longa (máximo 100 caracteres).");
+        var nome = req.Nome.Trim();
+        if (nome.Length > 100)
+            return BadRequest("O nome é demasiado longo (máximo 100 caracteres).");
+
+        if (!RegistosPorEndereco.Permitir(OrigemDoPedido.Endereco(HttpContext)))
+            return StatusCode(429, "Foram criadas demasiadas contas a partir desta ligação. Tente mais tarde.");
 
         if (await _db.Utilizadores.AnyAsync(u => u.Email == email))
             return Conflict("Este email já está registado.");
 
         var utilizador = new Utilizador
         {
-            Nome     = req.Nome.Trim(),
+            Nome     = nome,
             Email    = email,
             Password = PasswordHasher.Hash(req.Password)
         };
@@ -139,11 +152,19 @@ public class UtilizadoresController : ControllerBase
         if (string.IsNullOrWhiteSpace(req.Email) || string.IsNullOrWhiteSpace(req.Password))
             return BadRequest("Email e password são obrigatórios.");
 
+        var chaveEmail = req.Email.Trim().ToLower();
+        if (FalhasDeLogin.Excedeu(chaveEmail))
+            return StatusCode(429, "Demasiadas tentativas. Tente novamente dentro de alguns minutos.");
+
         var utilizador = await _db.Utilizadores
-            .FirstOrDefaultAsync(u => u.Email == req.Email.Trim().ToLower());
+            .FirstOrDefaultAsync(u => u.Email == chaveEmail);
 
         if (utilizador == null || !PasswordHasher.Verify(req.Password, utilizador.Password))
+        {
+            FalhasDeLogin.Registar(chaveEmail);
             return Unauthorized("Credenciais inválidas.");
+        }
+        FalhasDeLogin.Limpar(chaveEmail);
 
         return Ok(new AuthResponse(GerarToken(utilizador), utilizador.Nome, utilizador.Email));
     }

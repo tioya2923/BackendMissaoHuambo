@@ -670,6 +670,8 @@ public class GruposController : ControllerBase
         var g = await _db.Grupos.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
         var motivo = Limpar(req?.Motivo ?? "Sem motivo indicado", 400);
         var tituloDenuncia = Limpar($"[Grupo {g?.Nome}] {p.Titulo}", 200);
+        if (await _db.DenunciasPartilha.CountAsync(d => d.DenuncianteId == eu && d.CriadoEm >= DateTime.UtcNow.AddDays(-1)) >= 20)
+            return StatusCode(429, "Atingiu o limite de denúncias de hoje.");
         _db.DenunciasPartilha.Add(new DenunciaPartilha
         {
             DenuncianteId = eu, RemetenteId = p.AutorId,
@@ -717,6 +719,7 @@ public class GruposController : ControllerBase
         if (!permitido) return NotFound();
         var a = await _db.AudiosPartilha.AsNoTracking().FirstOrDefaultAsync(x => x.Id == audioId);
         if (a == null) return NotFound();
+        Response.Headers["X-Content-Type-Options"] = "nosniff";
         return File(a.Dados, a.ContentType);
     }
 }

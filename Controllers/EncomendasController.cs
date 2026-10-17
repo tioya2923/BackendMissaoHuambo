@@ -76,9 +76,15 @@ namespace MissaoBackend.Controllers
         // artigos de várias lojas. O servidor agrupa por loja e cria uma Encomenda por
         // cada uma, todas ligadas pelo mesmo GrupoId (uma única "compra" do ponto de
         // vista do comprador, mas cada loja só vê e gere a sua parte).
+        // Evita que alguém encha as lojas de encomendas falsas (o pedido é anónimo).
+        private static readonly LimitadorTentativas EncomendasPorEndereco = new(20, TimeSpan.FromHours(1));
+
         [HttpPost]
         public async Task<IActionResult> Create(NovaEncomenda input)
         {
+            if (!EncomendasPorEndereco.Permitir(OrigemDoPedido.Endereco(HttpContext)))
+                return StatusCode(429, "Fez demasiadas encomendas seguidas. Tente novamente mais tarde.");
+
             if (string.IsNullOrWhiteSpace(input.NomeCliente) || string.IsNullOrWhiteSpace(input.Contacto))
                 return BadRequest("Nome e contacto são obrigatórios.");
             if (input.Itens == null || input.Itens.Count == 0)

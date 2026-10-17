@@ -57,6 +57,8 @@ namespace MissaoBackend.Controllers
                 return BadRequest("Nome, email e password são obrigatórios.");
             if (req.Password.Length < 6)
                 return BadRequest("A password tem de ter pelo menos 6 caracteres.");
+            if (!RegistosPorEndereco.Permitir(OrigemDoPedido.Endereco(HttpContext)))
+                return StatusCode(429, "Foram criados demasiados registos a partir desta ligação. Tente mais tarde.");
             if (await _db.Lojas.AnyAsync(l => l.Email == req.Email))
                 return BadRequest("Já existe uma loja registada com este email.");
             if (req.Moeda != null && !Moeda.EhValida(req.Moeda))
@@ -85,15 +87,27 @@ namespace MissaoBackend.Controllers
             return Ok(new LojaLoginResponse(token, loja.Id, loja.Nome, loja.Aprovada));
         }
 
+        // Travam adivinhação de palavras-passe (por email) e criação massiva de lojas (por endereço).
+        private static readonly LimitadorTentativas FalhasDeLogin = new(8, TimeSpan.FromMinutes(15));
+        private static readonly LimitadorTentativas RegistosPorEndereco = new(10, TimeSpan.FromHours(1));
+
         [HttpPost("login")]
         public async Task<IActionResult> Login(LojaLoginRequest req)
         {
             if (string.IsNullOrWhiteSpace(req.Email) || string.IsNullOrWhiteSpace(req.Password))
                 return BadRequest("Email e password são obrigatórios.");
 
+            var chave = req.Email.Trim().ToLowerInvariant();
+            if (FalhasDeLogin.Excedeu(chave))
+                return StatusCode(429, "Demasiadas tentativas. Tente novamente dentro de alguns minutos.");
+
             var loja = await _db.Lojas.FirstOrDefaultAsync(l => l.Email == req.Email);
             if (loja == null || !PasswordHasher.Verify(req.Password, loja.Password))
+            {
+                FalhasDeLogin.Registar(chave);
                 return Unauthorized("Credenciais inválidas.");
+            }
+            FalhasDeLogin.Limpar(chave);
 
             var token = EmitirToken(loja);
             return Ok(new LojaLoginResponse(token, loja.Id, loja.Nome, loja.Aprovada));

@@ -255,6 +255,7 @@ public class PartilhasController : ControllerBase
         if (p?.AudioId == null) return NotFound();
         var a = await _db.AudiosPartilha.AsNoTracking().FirstOrDefaultAsync(x => x.Id == p.AudioId);
         if (a == null) return NotFound();
+        Response.Headers["X-Content-Type-Options"] = "nosniff";
         return File(a.Dados, a.ContentType);
     }
 
@@ -289,6 +290,8 @@ public class PartilhasController : ControllerBase
 
         var motivo = (req?.Motivo ?? "Sem motivo indicado").Trim();
         if (motivo.Length > 500) motivo = motivo[..500];
+        if (await _db.DenunciasPartilha.CountAsync(d => d.DenuncianteId == eu && d.CriadoEm >= DateTime.UtcNow.AddDays(-1)) >= 20)
+            return StatusCode(429, "Atingiu o limite de denúncias de hoje.");
         _db.DenunciasPartilha.Add(new DenunciaPartilha
         {
             DenuncianteId = eu, RemetenteId = p.RemetenteId,

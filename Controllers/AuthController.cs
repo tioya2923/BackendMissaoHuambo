@@ -26,6 +26,9 @@ public class AuthController : ControllerBase
 
     public record LoginResponse(string Token, string Nome, string Email);
 
+    // Trava a adivinhação da palavra-passe do administrador (por email).
+    private static readonly LimitadorTentativas FalhasDeLogin = new(8, TimeSpan.FromMinutes(15));
+
     [HttpPost("login")]
     [Produces("application/json")]
     public async Task<IActionResult> Login([FromBody] GestorLoginRequest req)
@@ -33,9 +36,17 @@ public class AuthController : ControllerBase
         if (string.IsNullOrWhiteSpace(req.Email) || string.IsNullOrWhiteSpace(req.Password))
             return BadRequest("Email e password são obrigatórios.");
 
+        var chave = req.Email.Trim().ToLowerInvariant();
+        if (FalhasDeLogin.Excedeu(chave))
+            return StatusCode(429, "Demasiadas tentativas. Tente novamente dentro de alguns minutos.");
+
         var gestor = await _db.Gestores.FirstOrDefaultAsync(g => g.Email == req.Email);
         if (gestor == null || !PasswordHasher.Verify(req.Password, gestor.Password))
+        {
+            FalhasDeLogin.Registar(chave);
             return Unauthorized("Credenciais inválidas.");
+        }
+        FalhasDeLogin.Limpar(chave);
 
         var claims = new[]
         {
