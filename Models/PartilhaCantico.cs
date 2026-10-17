@@ -32,6 +32,17 @@ public class BloqueioUtilizador
     public DateTime CriadoEm { get; set; } = DateTime.UtcNow;
 }
 
+// Ligação entre dois utilizadores que se encontraram na pesquisa. Começa como pedido (Aceite = false)
+// e só depois de o destinatário aceitar passa a contacto, nos dois sentidos.
+public class ContactoUtilizador
+{
+    public int Id { get; set; }
+    public int SolicitanteId { get; set; }
+    public int DestinatarioId { get; set; }
+    public bool Aceite { get; set; }
+    public DateTime CriadoEm { get; set; } = DateTime.UtcNow;
+}
+
 // Denúncia de uma partilha. Guarda uma cópia do conteúdo, para o gestor poder avaliar
 // mesmo que o destinatário entretanto apague a partilha.
 public class DenunciaPartilha

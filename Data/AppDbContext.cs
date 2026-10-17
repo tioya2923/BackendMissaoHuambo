@@ -39,6 +39,7 @@ public class AppDbContext : DbContext
     public DbSet<AudioPartilha> AudiosPartilha => Set<AudioPartilha>();
     public DbSet<BloqueioUtilizador> BloqueiosUtilizador => Set<BloqueioUtilizador>();
     public DbSet<DenunciaPartilha> DenunciasPartilha => Set<DenunciaPartilha>();
+    public DbSet<ContactoUtilizador> ContactosUtilizador => Set<ContactoUtilizador>();
     public DbSet<FormaApoio> FormasApoio => Set<FormaApoio>();
 
     public DbSet<Produto> Produtos => Set<Produto>();
@@ -289,6 +290,13 @@ public class AppDbContext : DbContext
             e.HasOne<Utilizador>().WithMany().HasForeignKey(b => b.UtilizadorId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne<Utilizador>().WithMany().HasForeignKey(b => b.BloqueadoId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(b => new { b.UtilizadorId, b.BloqueadoId }).IsUnique();
+        });
+
+        modelBuilder.Entity<ContactoUtilizador>(e =>
+        {
+            e.HasOne<Utilizador>().WithMany().HasForeignKey(c => c.SolicitanteId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Utilizador>().WithMany().HasForeignKey(c => c.DestinatarioId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(c => new { c.SolicitanteId, c.DestinatarioId }).IsUnique();
         });
 
         modelBuilder.Entity<DenunciaPartilha>(e =>

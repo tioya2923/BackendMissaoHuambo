@@ -109,7 +109,7 @@ public class PartilhasController : ControllerBase
 
     // ── Enviar ────────────────────────────────────────────────────────────────
 
-    public record EnviarRequest(string Titulo, string? Letra, string? Momento, int? AudioId, List<string> Codigos);
+    public record EnviarRequest(string Titulo, string? Letra, string? Momento, int? AudioId, List<string>? Codigos, List<int>? Contactos = null);
 
     [HttpPost]
     public async Task<IActionResult> Enviar([FromBody] EnviarRequest req)
@@ -124,15 +124,16 @@ public class PartilhasController : ControllerBase
         if (letra.Length == 0 && req.AudioId == null) return BadRequest("Envie a letra, a gravação ou ambas.");
 
         var codigos = (req.Codigos ?? new()).Select(NormalizarCodigo).Where(c => c.Length > 4).Distinct().ToList();
-        if (codigos.Count == 0) return BadRequest("Indique pelo menos um código de destinatário.");
-        if (codigos.Count > MaxDestinatarios) return BadRequest($"Pode enviar a no máximo {MaxDestinatarios} pessoas de cada vez.");
+        var contactoIds = (req.Contactos ?? new()).Distinct().ToList();
+        if (codigos.Count + contactoIds.Count == 0) return BadRequest("Indique pelo menos um destinatário.");
+        if (codigos.Count + contactoIds.Count > MaxDestinatarios) return BadRequest($"Pode enviar a no máximo {MaxDestinatarios} pessoas de cada vez.");
 
         var remetente = await _db.Utilizadores.FindAsync(id);
         if (remetente == null) return Unauthorized();
 
         var desde = DateTime.UtcNow.AddDays(-1);
         var enviadosHoje = await _db.PartilhasCanticos.CountAsync(p => p.RemetenteId == id && p.CriadoEm >= desde);
-        if (enviadosHoje + codigos.Count > MaxEnviosPorDia)
+        if (enviadosHoje + codigos.Count + contactoIds.Count > MaxEnviosPorDia)
             return StatusCode(429, "Atingiu o limite de envios de hoje. Tente amanhã.");
 
         if (req.AudioId != null)
@@ -148,8 +149,28 @@ public class PartilhasController : ControllerBase
         var momento = string.IsNullOrWhiteSpace(req.Momento) ? null : req.Momento!.Trim();
         if (momento != null && momento.Length > 60) momento = momento[..60];
 
+        // Só se envia a contactos que aceitaram (a ligação é nos dois sentidos).
+        var contactosAceites = contactoIds.Count == 0 ? new List<int>() : await _db.ContactosUtilizador.AsNoTracking()
+            .Where(c => c.Aceite && ((c.SolicitanteId == id && contactoIds.Contains(c.DestinatarioId)) || (c.DestinatarioId == id && contactoIds.Contains(c.SolicitanteId))))
+            .Select(c => c.SolicitanteId == id ? c.DestinatarioId : c.SolicitanteId).ToListAsync();
+
         var enviados = 0;
         var naoEnviados = new List<string>();
+        var contactosNaoEnviados = new List<int>();
+        foreach (var cid in contactoIds)
+        {
+            if (cid == id || !contactosAceites.Contains(cid) || bloqueadoresIds.Contains(cid) || euBloqueei.Contains(cid))
+            {
+                contactosNaoEnviados.Add(cid);
+                continue;
+            }
+            _db.PartilhasCanticos.Add(new PartilhaCantico
+            {
+                RemetenteId = id.Value, DestinatarioId = cid,
+                Titulo = titulo, Letra = letra, Momento = momento, AudioId = req.AudioId,
+            });
+            enviados++;
+        }
         foreach (var codigo in codigos)
         {
             var d = destinatarios.FirstOrDefault(x => x.Codigo == codigo);
@@ -167,7 +188,7 @@ public class PartilhasController : ControllerBase
             enviados++;
         }
         await _db.SaveChangesAsync();
-        return Ok(new { enviados, naoEnviados });
+        return Ok(new { enviados, naoEnviados, contactosNaoEnviados });
     }
 
     // ── Receber ───────────────────────────────────────────────────────────────
@@ -296,6 +317,12 @@ public class PartilhasController : ControllerBase
 
         if (!await _db.BloqueiosUtilizador.AnyAsync(b => b.UtilizadorId == eu && b.BloqueadoId == p.RemetenteId))
             _db.BloqueiosUtilizador.Add(new BloqueioUtilizador { UtilizadorId = eu.Value, BloqueadoId = p.RemetenteId });
+
+        // Bloquear desfaz também a ligação de contacto (ou pedido) entre as duas pessoas.
+        var ligacoes = await _db.ContactosUtilizador
+            .Where(c => (c.SolicitanteId == eu && c.DestinatarioId == p.RemetenteId) || (c.SolicitanteId == p.RemetenteId && c.DestinatarioId == eu))
+            .ToListAsync();
+        _db.ContactosUtilizador.RemoveRange(ligacoes);
 
         var deles = await _db.PartilhasCanticos.Where(x => x.DestinatarioId == eu && x.RemetenteId == p.RemetenteId).ToListAsync();
         var audios = deles.Where(x => x.AudioId != null).Select(x => x.AudioId!.Value).Distinct().ToList();

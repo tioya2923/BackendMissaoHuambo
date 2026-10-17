@@ -436,6 +436,34 @@ namespace MissaoBackend.Migrations
                     b.ToTable("ConfiguracaoSistema");
                 });
 
+            modelBuilder.Entity("MissaoBackend.Models.ContactoUtilizador", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<bool>("Aceite")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("DestinatarioId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SolicitanteId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DestinatarioId");
+
+                    b.HasIndex("SolicitanteId", "DestinatarioId")
+                        .IsUnique();
+
+                    b.ToTable("ContactosUtilizador");
+                });
+
             modelBuilder.Entity("MissaoBackend.Models.DenunciaPartilha", b =>
                 {
                     b.Property<int>("Id")
@@ -1069,6 +1097,9 @@ namespace MissaoBackend.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<bool>("VisivelPesquisa")
+                        .HasColumnType("tinyint(1)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Codigo")
@@ -1223,6 +1254,21 @@ namespace MissaoBackend.Migrations
                         .IsRequired();
 
                     b.Navigation("CatecismoUbTopico");
+                });
+
+            modelBuilder.Entity("MissaoBackend.Models.ContactoUtilizador", b =>
+                {
+                    b.HasOne("MissaoBackend.Models.Utilizador", null)
+                        .WithMany()
+                        .HasForeignKey("DestinatarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MissaoBackend.Models.Utilizador", null)
+                        .WithMany()
+                        .HasForeignKey("SolicitanteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("MissaoBackend.Models.DenunciaPartilha", b =>

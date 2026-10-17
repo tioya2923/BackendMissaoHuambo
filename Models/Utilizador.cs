@@ -11,6 +11,9 @@ public class Utilizador
     // Código curto (ex.: NDT-7K4PQ) que o utilizador dá a quem lhe quer enviar cânticos.
     public string? Codigo { get; set; }
 
+    // Se falso, a conta não aparece na pesquisa de pessoas (só se encontra pelo código).
+    public bool VisivelPesquisa { get; set; } = true;
+
     // Datas de sacramentos serializadas como "DD/MM/YYYY"
     public string? Nascimento { get; set; }
     public string? Baptismo { get; set; }
