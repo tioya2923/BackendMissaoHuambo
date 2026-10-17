@@ -8,6 +8,9 @@ public class Utilizador
     public string Password { get; set; } = string.Empty;
     public string? FotoUrl { get; set; }
 
+    // Código curto (ex.: NDT-7K4PQ) que o utilizador dá a quem lhe quer enviar cânticos.
+    public string? Codigo { get; set; }
+
     // Datas de sacramentos serializadas como "DD/MM/YYYY"
     public string? Nascimento { get; set; }
     public string? Baptismo { get; set; }

@@ -35,6 +35,10 @@ public class AppDbContext : DbContext
     public DbSet<Ficheiro> Ficheiros => Set<Ficheiro>();
 
     public DbSet<Utilizador> Utilizadores => Set<Utilizador>();
+    public DbSet<PartilhaCantico> PartilhasCanticos => Set<PartilhaCantico>();
+    public DbSet<AudioPartilha> AudiosPartilha => Set<AudioPartilha>();
+    public DbSet<BloqueioUtilizador> BloqueiosUtilizador => Set<BloqueioUtilizador>();
+    public DbSet<DenunciaPartilha> DenunciasPartilha => Set<DenunciaPartilha>();
     public DbSet<FormaApoio> FormasApoio => Set<FormaApoio>();
 
     public DbSet<Produto> Produtos => Set<Produto>();
@@ -258,6 +262,40 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<ConfiguracaoSistema>()
             .HasIndex(c => c.Chave)
             .IsUnique();
+
+
+        // ── Partilha de cânticos entre utilizadores ─────────────────────────
+        modelBuilder.Entity<Utilizador>()
+            .HasIndex(u => u.Codigo)
+            .IsUnique();
+
+        modelBuilder.Entity<PartilhaCantico>(e =>
+        {
+            e.HasOne<Utilizador>().WithMany().HasForeignKey(p => p.RemetenteId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Utilizador>().WithMany().HasForeignKey(p => p.DestinatarioId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<AudioPartilha>().WithMany().HasForeignKey(p => p.AudioId).OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(p => new { p.DestinatarioId, p.CriadoEm });
+            e.Property(p => p.Titulo).HasMaxLength(200);
+        });
+
+        modelBuilder.Entity<AudioPartilha>(e =>
+        {
+            e.HasOne<Utilizador>().WithMany().HasForeignKey(a => a.DonoId).OnDelete(DeleteBehavior.Cascade);
+            e.Property(a => a.Dados).HasColumnType("LONGBLOB");
+        });
+
+        modelBuilder.Entity<BloqueioUtilizador>(e =>
+        {
+            e.HasOne<Utilizador>().WithMany().HasForeignKey(b => b.UtilizadorId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Utilizador>().WithMany().HasForeignKey(b => b.BloqueadoId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(b => new { b.UtilizadorId, b.BloqueadoId }).IsUnique();
+        });
+
+        modelBuilder.Entity<DenunciaPartilha>(e =>
+        {
+            e.HasOne<Utilizador>().WithMany().HasForeignKey(d => d.DenuncianteId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne<Utilizador>().WithMany().HasForeignKey(d => d.RemetenteId).OnDelete(DeleteBehavior.SetNull);
+        });
 
         // Sem isto, o Pomelo/MySQL escolhe por omissão um BLOB pequeno
         // (64 KB) — insuficiente para fotos e PDFs.

@@ -83,24 +83,17 @@ public class UtilizadoresController : ControllerBase
         u.Diocese, u.Paroquia
     );
 
+    // Usa o mesmo serviço das lojas e do gestor: lê JWT_KEY/ISSUER/AUDIENCE do ambiente. (Antes lia só
+    // o ficheiro de configuração, onde a chave é um marcador — por isso o registo/entrada falhava com erro 500.)
     private string GerarToken(Utilizador u)
     {
-        var jwtSection = _config.GetSection("Jwt");
-        var key = Encoding.UTF8.GetBytes(jwtSection["Key"]!);
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub, u.Email),
-            new Claim("utilizadorId", u.Id.ToString())
+            new Claim("utilizadorId", u.Id.ToString()),
+            new Claim("tipo", "utilizador"),
         };
-        var creds = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256);
-        var token = new JwtSecurityToken(
-            issuer: jwtSection["Issuer"],
-            audience: jwtSection["Audience"],
-            claims: claims,
-            expires: DateTime.UtcNow.AddDays(30),
-            signingCredentials: creds
-        );
-        return new JwtSecurityTokenHandler().WriteToken(token);
+        return JwtTokenService.Criar(_config, claims, TimeSpan.FromDays(30));
     }
 
     private int? UtilizadorId()
@@ -119,13 +112,19 @@ public class UtilizadoresController : ControllerBase
             string.IsNullOrWhiteSpace(req.Password))
             return BadRequest("Nome, email e password são obrigatórios.");
 
-        if (await _db.Utilizadores.AnyAsync(u => u.Email == req.Email.ToLower()))
+        var email = req.Email.Trim().ToLower();
+        if (!email.Contains('@') || email.Length > 200)
+            return BadRequest("Indique um email válido.");
+        if (req.Password.Length < 6)
+            return BadRequest("A palavra-passe deve ter pelo menos 6 caracteres.");
+
+        if (await _db.Utilizadores.AnyAsync(u => u.Email == email))
             return Conflict("Este email já está registado.");
 
         var utilizador = new Utilizador
         {
             Nome     = req.Nome.Trim(),
-            Email    = req.Email.Trim().ToLower(),
+            Email    = email,
             Password = PasswordHasher.Hash(req.Password)
         };
         _db.Utilizadores.Add(utilizador);
@@ -141,7 +140,7 @@ public class UtilizadoresController : ControllerBase
             return BadRequest("Email e password são obrigatórios.");
 
         var utilizador = await _db.Utilizadores
-            .FirstOrDefaultAsync(u => u.Email == req.Email.ToLower());
+            .FirstOrDefaultAsync(u => u.Email == req.Email.Trim().ToLower());
 
         if (utilizador == null || !PasswordHasher.Verify(req.Password, utilizador.Password))
             return Unauthorized("Credenciais inválidas.");
@@ -290,6 +289,20 @@ public class UtilizadoresController : ControllerBase
         var u = await _db.Utilizadores.FindAsync(id);
         if (u == null) return NotFound();
 
+        _db.Utilizadores.Remove(u);
+        await _db.SaveChangesAsync();
+        return NoContent();
+    }
+
+    [HttpDelete("eu")]
+    [Authorize]
+    public async Task<IActionResult> EliminarEu()
+    {
+        var id = UtilizadorId();
+        if (id == null) return Unauthorized();
+        var u = await _db.Utilizadores.FindAsync(id);
+        if (u == null) return NotFound();
+        // Partilhas enviadas e recebidas, gravações e bloqueios desta conta são apagados em cascata.
         _db.Utilizadores.Remove(u);
         await _db.SaveChangesAsync();
         return NoContent();

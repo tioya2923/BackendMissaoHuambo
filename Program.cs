@@ -182,7 +182,9 @@ using (var scope = app.Services.CreateScope())
         // Seed Tópicos Umbundu
         if (!await db.TopicosUmb.AnyAsync())
         {
-            var topicosPt = await db.Topicos.ToListAsync();
+            // Só os tópicos de Português (IdiomaId 1): copiar também os dos outros idiomas repetia slugs
+            // e fazia o arranque falhar numa base de dados nova.
+            var topicosPt = await db.Topicos.Where(t => t.IdiomaId == 1).ToListAsync();
             foreach (var topicoPt in topicosPt)
             {
                 db.TopicosUmb.Add(new TopicoUmb
