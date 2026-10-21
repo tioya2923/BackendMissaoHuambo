@@ -8,6 +8,9 @@ public class Cantico
     public string Titulo { get; set; } = string.Empty;
     public string Slug { get; set; } = string.Empty;
     public string Letra { get; set; } = string.Empty;
+
+    // Número do cântico no livro/cancioneiro de origem (quando o idioma tem os cânticos numerados).
+    public int? Numero { get; set; }
     public string? Autor { get; set; }
     public string? PdfUrl { get; set; }
 

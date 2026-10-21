@@ -87,6 +87,9 @@ namespace MissaoBackend.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<int?>("Numero")
+                        .HasColumnType("int");
+
                     b.Property<string>("PdfUrl")
                         .HasColumnType("longtext");
 

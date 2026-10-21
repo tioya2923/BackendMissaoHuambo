@@ -69,11 +69,12 @@ namespace MissaoBackend.Controllers
                 .Include(c => c.Topico)
                 .AsNoTracking()
                 .Where(c => c.IdiomaId == idiomaId)
-                .OrderBy(c => c.Titulo)
+                .OrderBy(c => c.Numero == null).ThenBy(c => c.Numero).ThenBy(c => c.Titulo)
                 .Select(c => new {
                     c.Id,
                     c.Titulo,
                     c.Slug,
+                    c.Numero,
                     c.TopicoId,
                     Topico = c.Topico == null ? null : new { c.Topico.Id, c.Topico.Nome, c.Topico.Slug }
                 })
@@ -96,8 +97,8 @@ namespace MissaoBackend.Controllers
 
             var canticos = await _db.Canticos
                 .Where(c => c.TopicoId == topico.Id)
-                .OrderBy(c => c.Titulo)
-                .Select(c => new { c.Id, c.Titulo, c.Slug })
+                .OrderBy(c => c.Numero == null).ThenBy(c => c.Numero).ThenBy(c => c.Titulo)
+                .Select(c => new { c.Id, c.Titulo, c.Slug, c.Numero })
                 .ToListAsync();
 
             return Ok(canticos);
@@ -132,8 +133,8 @@ namespace MissaoBackend.Controllers
                 .Where(c => c.IdiomaId == idiomaId &&
                     (EF.Functions.Like(c.Titulo, $"%{q}%") ||
                     EF.Functions.Like(c.Letra, $"%{q}%")))
-                .OrderBy(c => c.Titulo)
-                .Select(c => new { c.Id, c.Titulo, c.Slug })
+                .OrderBy(c => c.Numero == null).ThenBy(c => c.Numero).ThenBy(c => c.Titulo)
+                .Select(c => new { c.Id, c.Titulo, c.Slug, c.Numero })
                 .ToListAsync();
 
             return Ok(results);

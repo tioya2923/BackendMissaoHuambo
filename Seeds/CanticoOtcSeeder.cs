@@ -47,6 +47,29 @@ public static class CanticoOtcSeeder
             .ToDictionary(grupo => grupo.Key, grupo => grupo.Count(), StringComparer.OrdinalIgnoreCase);
         var novos = new List<Cantico>();
 
+        // Cânticos já importados antes de existir o número: preenche-o a partir do livro de origem.
+        var semNumero = await db.Canticos
+            .Where(c => c.IdiomaId == idiomaId && c.Numero == null)
+            .ToListAsync();
+        var numeroPorSlug = canticos.ToDictionary(
+            c => slugCounts[SlugHelper.Slugify(c.Titulo)] > 1 ? $"{SlugHelper.Slugify(c.Titulo)}-{c.Numero}" : SlugHelper.Slugify(c.Titulo),
+            c => c.Numero,
+            StringComparer.OrdinalIgnoreCase);
+        var atualizados = 0;
+        foreach (var existente in semNumero)
+        {
+            if (numeroPorSlug.TryGetValue(existente.Slug, out var numero))
+            {
+                existente.Numero = numero;
+                atualizados++;
+            }
+        }
+        if (atualizados > 0)
+        {
+            await db.SaveChangesAsync();
+            Console.WriteLine($"✓ {atualizados} cânticos Oshikwanhama numerados.");
+        }
+
         foreach (var cantico in canticos)
         {
             var baseSlug = SlugHelper.Slugify(cantico.Titulo);
@@ -58,6 +81,7 @@ public static class CanticoOtcSeeder
                 Titulo = cantico.Titulo,
                 Slug = slug,
                 Letra = cantico.Letra,
+                Numero = cantico.Numero,
                 TopicoId = topico.Id,
                 IdiomaId = idiomaId,
             });
