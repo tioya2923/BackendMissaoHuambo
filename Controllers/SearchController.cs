@@ -40,7 +40,7 @@ namespace MissaoBackend.Controllers
 
             var topicos = await _context.Topicos
                 .AsNoTracking()
-                .Where(t => t.IdiomaId == idiomaId && (t.Nome.Contains(q) || t.Slug.Contains(q)))
+                .Where(t => t.IdiomaId == idiomaId && (t.Nome.Contains(q) || t.Slug.Contains(q)) && _context.Canticos.Any(c => c.TopicoId == t.Id))
                 .Take(LimitePorSeccao)
                 .Select(t => new ItemTopico(t.Id, t.Nome, t.Slug))
                 .ToListAsync();
