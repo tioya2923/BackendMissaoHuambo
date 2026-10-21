@@ -47,27 +47,37 @@ public static class CanticoOtcSeeder
             .ToDictionary(grupo => grupo.Key, grupo => grupo.Count(), StringComparer.OrdinalIgnoreCase);
         var novos = new List<Cantico>();
 
-        // Cânticos já importados antes de existir o número: preenche-o a partir do livro de origem.
-        var semNumero = await db.Canticos
-            .Where(c => c.IdiomaId == idiomaId && c.Numero == null)
+        // Cânticos já importados: preenche o número do livro e corrige os títulos que ainda estão todos em
+        // maiúsculas (como vieram do livro). Os títulos que um administrador já editou não são tocados.
+        var existentes = await db.Canticos
+            .Where(c => c.IdiomaId == idiomaId)
             .ToListAsync();
-        var numeroPorSlug = canticos.ToDictionary(
+        var dadosPorSlug = canticos.ToDictionary(
             c => slugCounts[SlugHelper.Slugify(c.Titulo)] > 1 ? $"{SlugHelper.Slugify(c.Titulo)}-{c.Numero}" : SlugHelper.Slugify(c.Titulo),
-            c => c.Numero,
+            c => c,
             StringComparer.OrdinalIgnoreCase);
-        var atualizados = 0;
-        foreach (var existente in semNumero)
+        var numerados = 0;
+        var retitulados = 0;
+        foreach (var existente in existentes)
         {
-            if (numeroPorSlug.TryGetValue(existente.Slug, out var numero))
+            if (!dadosPorSlug.TryGetValue(existente.Slug, out var dados)) continue;
+            if (existente.Numero == null)
             {
-                existente.Numero = numero;
-                atualizados++;
+                existente.Numero = dados.Numero;
+                numerados++;
+            }
+            var todoEmMaiusculas = existente.Titulo == existente.Titulo.ToUpperInvariant();
+            if (todoEmMaiusculas && existente.Titulo != dados.Titulo)
+            {
+                existente.Titulo = dados.Titulo;
+                retitulados++;
             }
         }
-        if (atualizados > 0)
+        if (numerados > 0 || retitulados > 0)
         {
             await db.SaveChangesAsync();
-            Console.WriteLine($"✓ {atualizados} cânticos Oshikwanhama numerados.");
+            if (numerados > 0) Console.WriteLine($"✓ {numerados} cânticos Oshikwanhama numerados.");
+            if (retitulados > 0) Console.WriteLine($"✓ {retitulados} títulos de cânticos Oshikwanhama corrigidos.");
         }
 
         foreach (var cantico in canticos)
