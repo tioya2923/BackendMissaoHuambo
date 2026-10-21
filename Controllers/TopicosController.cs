@@ -35,12 +35,28 @@ public class TopicosController : ControllerBase
         var idiomaId = await ResolverIdiomaId(idioma);
         if (idiomaId == null) return BadRequest($"Idioma '{idioma}' não existe.");
 
+        // Só os tópicos que têm pelo menos um cântico.
         var topicos = await _db.Topicos
-            .Where(t => t.IdiomaId == idiomaId)
+            .Where(t => t.IdiomaId == idiomaId && _db.Canticos.Any(c => c.TopicoId == t.Id))
             .OrderBy(t => t.Nome)
             .ToListAsync();
 
         return Ok(topicos);
+    }
+
+    /// <summary>Todos os tópicos, também os vazios: usado pelo painel de administração para lhes acrescentar cânticos.</summary>
+    [HttpGet("todos")]
+    [Authorize(Policy = "Gestor")]
+    public async Task<ActionResult<IEnumerable<Topico>>> GetTodos([FromQuery] string idioma = "pt")
+    {
+        var idiomaId = await ResolverIdiomaId(idioma);
+        if (idiomaId == null) return BadRequest($"Idioma '{idioma}' não existe.");
+
+        return Ok(await _db.Topicos
+            .AsNoTracking()
+            .Where(t => t.IdiomaId == idiomaId)
+            .OrderBy(t => t.Nome)
+            .ToListAsync());
     }
 
     [HttpPost]

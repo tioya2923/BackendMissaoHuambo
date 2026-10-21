@@ -28,15 +28,46 @@ namespace MissaoBackend.Controllers
             return id;
         }
 
+        /// <summary>
+        /// Ids dos tópicos de um idioma que têm conteúdo: perguntas/textos directos ou em algum
+        /// dos seus subtópicos (a qualquer profundidade).
+        /// </summary>
+        private async Task<HashSet<int>> TopicosComConteudo(int idiomaId)
+        {
+            var estrutura = await _context.CatecismoPtTopicos.AsNoTracking()
+                .Where(t => t.IdiomaId == idiomaId)
+                .Select(t => new { t.Id, t.ParentId })
+                .ToListAsync();
+            var comEntradas = (await _context.CatecismosPt.AsNoTracking()
+                    .Where(c => c.IdiomaId == idiomaId && c.CatecismoPtTopicoId != null)
+                    .Select(c => c.CatecismoPtTopicoId!.Value)
+                    .Distinct()
+                    .ToListAsync())
+                .ToHashSet();
+
+            var pai = estrutura.ToDictionary(t => t.Id, t => t.ParentId);
+            var resultado = new HashSet<int>();
+            foreach (var id in comEntradas)
+            {
+                int? atual = id;
+                while (atual != null && resultado.Add(atual.Value))
+                    atual = pai.TryGetValue(atual.Value, out var p) ? p : null;
+            }
+            return resultado;
+        }
+
+        // Só os tópicos de topo que têm conteúdo.
         [HttpGet]
         public async Task<ActionResult<IEnumerable<CatecismoPtTopico>>> GetAll([FromQuery] string idioma = "pt")
         {
             var idiomaId = await ResolverIdiomaId(idioma);
             if (idiomaId == null) return BadRequest($"Idioma '{idioma}' não existe.");
 
-            return await _context.CatecismoPtTopicos
+            var comConteudo = await TopicosComConteudo(idiomaId.Value);
+            var topicos = await _context.CatecismoPtTopicos
                 .Where(t => t.ParentId == null && t.IdiomaId == idiomaId)
                 .ToListAsync();
+            return topicos.Where(t => comConteudo.Contains(t.Id)).ToList();
         }
 
         // Lista plana com todos os tópicos e subtópicos — usada pelo painel de administração
@@ -54,12 +85,18 @@ namespace MissaoBackend.Controllers
                 .ToListAsync();
         }
 
+        // Só os subtópicos que têm conteúdo.
         [HttpGet("{id}/subtopicos")]
         public async Task<ActionResult<IEnumerable<CatecismoPtTopico>>> GetSubTopicos(int id)
         {
-            return await _context.CatecismoPtTopicos
+            var subtopicos = await _context.CatecismoPtTopicos
                 .Where(t => t.ParentId == id)
                 .ToListAsync();
+            if (subtopicos.Count == 0) return subtopicos;
+
+            var idiomaId = subtopicos[0].IdiomaId;
+            var comConteudo = await TopicosComConteudo(idiomaId);
+            return subtopicos.Where(t => comConteudo.Contains(t.Id)).ToList();
         }
 
         [HttpGet("{id}")]

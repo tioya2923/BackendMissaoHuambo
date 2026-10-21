@@ -22,8 +22,34 @@ namespace MissaoBackend.Controllers
             _db = db;
         }
 
+        /// <summary>
+        /// Idiomas que a app e o site mostram: só os activos que têm conteúdo. Com ?secao=canticos ou
+        /// ?secao=catecismo, só os que têm conteúdo nessa secção (sem o parâmetro, em qualquer uma).
+        /// </summary>
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Idioma>>> GetAll()
+        public async Task<ActionResult<IEnumerable<Idioma>>> GetAll([FromQuery] string? secao = null)
+        {
+            var comCanticos = await _db.Canticos.AsNoTracking().Select(c => c.IdiomaId).Distinct().ToListAsync();
+            var comCatecismo = await _db.CatecismosPt.AsNoTracking().Select(c => c.IdiomaId).Distinct().ToListAsync();
+
+            var s = (secao ?? string.Empty).Trim().ToLowerInvariant();
+            var comConteudo = s switch
+            {
+                "canticos" => comCanticos,
+                "catecismo" => comCatecismo,
+                _ => comCanticos.Union(comCatecismo).ToList(),
+            };
+
+            return await _db.Idiomas.AsNoTracking()
+                .Where(i => i.Ativo && comConteudo.Contains(i.Id))
+                .OrderBy(i => i.Ordem).ThenBy(i => i.Nome)
+                .ToListAsync();
+        }
+
+        /// <summary>Todos os idiomas (também os inactivos e os sem conteúdo): usado pelo painel de administração.</summary>
+        [HttpGet("todos")]
+        [Authorize(Policy = "Gestor")]
+        public async Task<ActionResult<IEnumerable<Idioma>>> GetTodos()
         {
             return await _db.Idiomas.AsNoTracking().OrderBy(i => i.Ordem).ThenBy(i => i.Nome).ToListAsync();
         }
