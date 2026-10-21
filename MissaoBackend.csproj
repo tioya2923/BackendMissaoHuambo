@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Seeds\oshikwanhama.txt" LogicalName="MissaoBackend.Seeds.oshikwanhama.txt" />
+    <EmbeddedResource Include="Seeds\Calendario2027.json" LogicalName="MissaoBackend.Seeds.Calendario2027.json" />
   </ItemGroup>
 
   <ItemGroup>

@@ -182,6 +182,9 @@ using (var scope = app.Services.CreateScope())
         // Seed Cânticos Oshikwanhama
         await CanticoOtcSeeder.SeedAsync(db);
 
+        // Seed Calendário Litúrgico 2027
+        await CalendarioSeeder.SeedAsync(db);
+
         // Seed Tópicos Umbundu
         if (!await db.TopicosUmb.AnyAsync())
         {
