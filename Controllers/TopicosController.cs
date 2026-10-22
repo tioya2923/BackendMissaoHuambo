@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.EntityFrameworkCore;
 using MissaoBackend.Data;
 using MissaoBackend.Models;
@@ -30,6 +31,7 @@ public class TopicosController : ControllerBase
     }
 
     [HttpGet]
+    [OutputCache(PolicyName = "Leitura")]
     public async Task<ActionResult<IEnumerable<Topico>>> GetAll([FromQuery] string idioma = "pt")
     {
         var idiomaId = await ResolverIdiomaId(idioma);

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.EntityFrameworkCore;
 using MissaoBackend.Data;
 using MissaoBackend.Models;
@@ -20,6 +21,7 @@ public class CalendarioController : ControllerBase
     // GET /api/calendario?inicio=2025-12-23&fim=2025-12-29
     // GET /api/calendario?data=2025-12-23  (retrocompatível)
     [HttpGet]
+    [OutputCache(PolicyName = "Leitura")]
     public async Task<IActionResult> GetByDate(
         [FromQuery] string? data,
         [FromQuery] string? inicio,

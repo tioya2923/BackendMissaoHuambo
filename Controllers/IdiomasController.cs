@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.EntityFrameworkCore;
 using MissaoBackend.Data;
 using MissaoBackend.Models;
@@ -27,6 +28,7 @@ namespace MissaoBackend.Controllers
         /// ?secao=catecismo, só os que têm conteúdo nessa secção (sem o parâmetro, em qualquer uma).
         /// </summary>
         [HttpGet]
+        [OutputCache(PolicyName = "Leitura")]
         public async Task<ActionResult<IEnumerable<Idioma>>> GetAll([FromQuery] string? secao = null)
         {
             var comCanticos = await _db.Canticos.AsNoTracking().Select(c => c.IdiomaId).Distinct().ToListAsync();

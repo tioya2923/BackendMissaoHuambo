@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.EntityFrameworkCore;
 using MissaoBackend.Data;
 using MissaoBackend.Models;
@@ -58,6 +59,7 @@ namespace MissaoBackend.Controllers
 
         // Só os tópicos de topo que têm conteúdo.
         [HttpGet]
+        [OutputCache(PolicyName = "Leitura")]
         public async Task<ActionResult<IEnumerable<CatecismoPtTopico>>> GetAll([FromQuery] string idioma = "pt")
         {
             var idiomaId = await ResolverIdiomaId(idioma);
@@ -87,6 +89,7 @@ namespace MissaoBackend.Controllers
 
         // Só os subtópicos que têm conteúdo.
         [HttpGet("{id}/subtopicos")]
+        [OutputCache(PolicyName = "Leitura")]
         public async Task<ActionResult<IEnumerable<CatecismoPtTopico>>> GetSubTopicos(int id)
         {
             var subtopicos = await _context.CatecismoPtTopicos
@@ -100,6 +103,7 @@ namespace MissaoBackend.Controllers
         }
 
         [HttpGet("{id}")]
+        [OutputCache(PolicyName = "Leitura")]
         public async Task<ActionResult<CatecismoPtTopico>> GetById(int id)
         {
             var item = await _context.CatecismoPtTopicos.FirstOrDefaultAsync(t => t.Id == id);
@@ -108,6 +112,7 @@ namespace MissaoBackend.Controllers
         }
 
         [HttpGet("slug/{slug}")]
+        [OutputCache(PolicyName = "Leitura")]
         public async Task<ActionResult<CatecismoPtTopico>> GetBySlug(string slug, [FromQuery] string idioma = "pt")
         {
             var idiomaId = await ResolverIdiomaId(idioma);

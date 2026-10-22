@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.EntityFrameworkCore;
 using MissaoBackend.Data;
 using MissaoBackend.Models;
@@ -60,6 +61,7 @@ namespace MissaoBackend.Controllers
         }
 
         [HttpGet]
+        [OutputCache(PolicyName = "Leitura")]
         public async Task<ActionResult> GetAll([FromQuery] string idioma = "pt")
         {
             var idiomaId = await ResolverIdiomaId(idioma);
@@ -84,6 +86,7 @@ namespace MissaoBackend.Controllers
         }
 
         [HttpGet("topico/{slug}")]
+        [OutputCache(PolicyName = "Leitura")]
         public async Task<ActionResult> GetByTopico(string slug, [FromQuery] string idioma = "pt")
         {
             var idiomaId = await ResolverIdiomaId(idioma);
@@ -105,6 +108,7 @@ namespace MissaoBackend.Controllers
         }
 
         [HttpGet("{slug}")]
+        [OutputCache(PolicyName = "Leitura")]
         public async Task<ActionResult<Cantico>> GetBySlug(string slug, [FromQuery] string idioma = "pt")
         {
             var idiomaId = await ResolverIdiomaId(idioma);

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 using MissaoBackend.Data;
 using MissaoBackend.Models;
 using MissaoBackend.Utils;
@@ -29,6 +30,7 @@ namespace MissaoBackend.Controllers
         }
 
         [HttpGet]
+        [OutputCache(PolicyName = "Leitura")]
         public async Task<ActionResult<IEnumerable<CatecismoPt>>> GetAll([FromQuery] int? topicoId = null, [FromQuery] string idioma = "pt")
         {
             var idiomaId = await ResolverIdiomaId(idioma);
@@ -41,6 +43,7 @@ namespace MissaoBackend.Controllers
         }
 
         [HttpGet("{id}")]
+        [OutputCache(PolicyName = "Leitura")]
         public async Task<ActionResult<CatecismoPt>> GetById(int id)
         {
             var item = await _context.CatecismosPt.FindAsync(id);
