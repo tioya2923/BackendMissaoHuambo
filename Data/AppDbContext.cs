@@ -40,6 +40,7 @@ public class AppDbContext : DbContext
     public DbSet<BloqueioUtilizador> BloqueiosUtilizador => Set<BloqueioUtilizador>();
     public DbSet<DenunciaPartilha> DenunciasPartilha => Set<DenunciaPartilha>();
     public DbSet<ContactoUtilizador> ContactosUtilizador => Set<ContactoUtilizador>();
+    public DbSet<RecuperacaoSenha> RecuperacoesSenha => Set<RecuperacaoSenha>();
     public DbSet<Grupo> Grupos => Set<Grupo>();
     public DbSet<MembroGrupo> MembrosGrupo => Set<MembroGrupo>();
     public DbSet<PublicacaoGrupo> PublicacoesGrupo => Set<PublicacaoGrupo>();
@@ -338,6 +339,12 @@ public class AppDbContext : DbContext
             e.HasOne<PublicacaoGrupo>().WithMany().HasForeignKey(v => v.PublicacaoId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne<Utilizador>().WithMany().HasForeignKey(v => v.UtilizadorId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(v => new { v.PublicacaoId, v.UtilizadorId }).IsUnique();
+        });
+
+        modelBuilder.Entity<RecuperacaoSenha>(e =>
+        {
+            e.HasOne<Utilizador>().WithMany().HasForeignKey(r => r.UtilizadorId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(r => r.UtilizadorId);
         });
 
         modelBuilder.Entity<ContactoUtilizador>(e =>

@@ -1121,6 +1121,38 @@ namespace MissaoBackend.Migrations
                     b.ToTable("PublicacoesGrupo");
                 });
 
+            modelBuilder.Entity("MissaoBackend.Models.RecuperacaoSenha", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<string>("CodigoHash")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("ExpiraEm")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("Tentativas")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("Usado")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<int>("UtilizadorId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UtilizadorId");
+
+                    b.ToTable("RecuperacoesSenha");
+                });
+
             modelBuilder.Entity("MissaoBackend.Models.Topico", b =>
                 {
                     b.Property<int>("Id")
@@ -1591,6 +1623,15 @@ namespace MissaoBackend.Migrations
                     b.HasOne("MissaoBackend.Models.Grupo", null)
                         .WithMany()
                         .HasForeignKey("GrupoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MissaoBackend.Models.RecuperacaoSenha", b =>
+                {
+                    b.HasOne("MissaoBackend.Models.Utilizador", null)
+                        .WithMany()
+                        .HasForeignKey("UtilizadorId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
