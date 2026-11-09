@@ -113,6 +113,111 @@ namespace MissaoBackend.Controllers
             return Ok(new LojaLoginResponse(token, loja.Id, loja.Nome, loja.Aprovada));
         }
 
+        // ── Recuperar a palavra-passe da loja ────────────────────────────────────
+
+        public record EsqueciSenhaLojaRequest(string Email);
+        public record RedefinirSenhaLojaRequest(string Email, string Codigo, string NovaPassword);
+
+        private static readonly LimitadorTentativas PedidosDeRecuperacaoPorEmail = new(3, TimeSpan.FromHours(1));
+        private static readonly LimitadorTentativas PedidosDeRecuperacaoPorEndereco = new(10, TimeSpan.FromHours(1));
+        private static readonly LimitadorTentativas FalhasDeRedefinicao = new(10, TimeSpan.FromMinutes(15));
+        private const int TentativasPorCodigo = 5;
+        private static readonly TimeSpan ValidadeDoCodigo = TimeSpan.FromMinutes(15);
+
+        /// <summary>
+        /// Pede um código de 6 dígitos por email para redefinir a palavra-passe da loja. A resposta é sempre a mesma,
+        /// exista ou não a loja, para não revelar quem está registado.
+        /// </summary>
+        [HttpPost("esqueci-senha")]
+        public async Task<IActionResult> EsqueciSenha([FromBody] EsqueciSenhaLojaRequest req)
+        {
+            if (string.IsNullOrWhiteSpace(req?.Email)) return BadRequest("Indique o email.");
+            var email = req.Email.Trim().ToLowerInvariant();
+            if (!email.Contains('@') || email.Length > 200) return BadRequest("Indique um email válido.");
+
+            if (!PedidosDeRecuperacaoPorEndereco.Permitir(OrigemDoPedido.Endereco(HttpContext)) ||
+                !PedidosDeRecuperacaoPorEmail.Permitir(email))
+                return StatusCode(429, "Foram feitos demasiados pedidos. Tente novamente dentro de uma hora.");
+
+            var resposta = Ok(new { mensagem = "Se existir uma loja com este email, enviámos um código de 6 dígitos, válido durante 15 minutos." });
+
+            var loja = await _db.Lojas.FirstOrDefaultAsync(l => l.Email == email);
+            if (loja == null) return resposta;
+
+            var agora = DateTime.UtcNow;
+            // Um código novo invalida os anteriores; apaga os que já têm mais de um dia.
+            foreach (var antigo in await _db.RecuperacoesSenhaLoja.Where(r => r.LojaId == loja.Id && !r.Usado).ToListAsync())
+                antigo.Usado = true;
+            await _db.RecuperacoesSenhaLoja.Where(r => r.ExpiraEm < agora.AddDays(-1)).ExecuteDeleteAsync();
+
+            var codigo = System.Security.Cryptography.RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6");
+            _db.RecuperacoesSenhaLoja.Add(new RecuperacaoSenhaLoja
+            {
+                LojaId = loja.Id,
+                CodigoHash = PasswordHasher.Hash(codigo),
+                CriadoEm = agora,
+                ExpiraEm = agora + ValidadeDoCodigo,
+            });
+            await _db.SaveChangesAsync();
+
+            // Só para testes locais, sem SMTP: mostra o código na consola do servidor.
+            if (Environment.GetEnvironmentVariable("RECUPERACAO_MOSTRAR_CODIGO") == "1")
+                Console.WriteLine($"[teste] código de recuperação para {email}: {codigo}");
+
+            var corpo = $"<p>Olá {System.Net.WebUtility.HtmlEncode(loja.Nome)},</p>" +
+                "<p>O seu código para redefinir a palavra-passe da loja na Ndatava é:</p>" +
+                $"<p style=\"font-size:28px;letter-spacing:6px;font-weight:bold\">{codigo}</p>" +
+                "<p>É válido durante 15 minutos. Se não foi você a pedi-lo, ignore este email: a sua loja continua segura.</p>";
+            // Sem esperar: o tempo de resposta não deve denunciar se a loja existe. EmailService trata os seus próprios erros.
+            _ = EmailService.EnviarAsync(_config, loja.Email, "Código para recuperar a palavra-passe da loja — Ndatava", corpo);
+
+            return resposta;
+        }
+
+        /// <summary>Confirma o código recebido por email e define a palavra-passe nova. Entra logo na loja.</summary>
+        [HttpPost("redefinir-senha")]
+        public async Task<IActionResult> RedefinirSenha([FromBody] RedefinirSenhaLojaRequest req)
+        {
+            if (string.IsNullOrWhiteSpace(req?.Email) || string.IsNullOrWhiteSpace(req.Codigo) || string.IsNullOrEmpty(req.NovaPassword))
+                return BadRequest("Preencha o email, o código e a palavra-passe nova.");
+            // Mesmo mínimo do registo das lojas.
+            if (req.NovaPassword.Length < 6) return BadRequest("A palavra-passe deve ter pelo menos 6 caracteres.");
+            if (req.NovaPassword.Length > 100) return BadRequest("A palavra-passe é demasiado longa (máximo 100 caracteres).");
+
+            var email = req.Email.Trim().ToLowerInvariant();
+            if (FalhasDeRedefinicao.Excedeu(email))
+                return StatusCode(429, "Demasiadas tentativas. Tente novamente dentro de alguns minutos.");
+
+            const string invalido = "Código inválido ou expirado. Peça um novo código.";
+            var loja = await _db.Lojas.FirstOrDefaultAsync(l => l.Email == email);
+            if (loja == null) { FalhasDeRedefinicao.Registar(email); return BadRequest(invalido); }
+
+            var agora = DateTime.UtcNow;
+            var recuperacao = await _db.RecuperacoesSenhaLoja
+                .Where(r => r.LojaId == loja.Id && !r.Usado && r.ExpiraEm > agora && r.Tentativas < TentativasPorCodigo)
+                .OrderByDescending(r => r.CriadoEm)
+                .FirstOrDefaultAsync();
+            if (recuperacao == null) { FalhasDeRedefinicao.Registar(email); return BadRequest(invalido); }
+
+            if (!PasswordHasher.Verify(req.Codigo.Trim(), recuperacao.CodigoHash))
+            {
+                recuperacao.Tentativas++;
+                if (recuperacao.Tentativas >= TentativasPorCodigo) recuperacao.Usado = true;
+                await _db.SaveChangesAsync();
+                FalhasDeRedefinicao.Registar(email);
+                return BadRequest(invalido);
+            }
+
+            loja.Password = PasswordHasher.Hash(req.NovaPassword);
+            foreach (var r in await _db.RecuperacoesSenhaLoja.Where(r => r.LojaId == loja.Id && !r.Usado).ToListAsync())
+                r.Usado = true;
+            await _db.SaveChangesAsync();
+
+            FalhasDeRedefinicao.Limpar(email);
+            FalhasDeLogin.Limpar(email);
+            return Ok(new LojaLoginResponse(EmitirToken(loja), loja.Id, loja.Nome, loja.Aprovada));
+        }
+
         private string EmitirToken(Loja loja)
         {
             var claims = new[]
