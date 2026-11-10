@@ -156,6 +156,13 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapGet("/", () => Results.Ok(new { status = "ok", service = "MissaoBackend" }));
 
+// Política de privacidade em HTML simples (sem JavaScript): é o endereço para a Google Play e a App Store.
+app.MapGet("/privacidade", (HttpContext ctx) =>
+{
+    ctx.Response.Headers.CacheControl = "public, max-age=3600";
+    return Results.Content(MissaoBackend.Paginas.PoliticaDePrivacidade.Html, "text/html; charset=utf-8");
+});
+
 // --- MIGRATIONS E SEED DATA ---
 using (var scope = app.Services.CreateScope())
 {
