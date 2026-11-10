@@ -58,6 +58,7 @@ builder.Services.AddControllers();
 
 // Respostas públicas de leitura (idiomas, tópicos, cânticos, catecismo, calendário) ficam 30 s em memória:
 // a base de dados está longe e cada pedido custava ~1-2 s. Pedidos autenticados nunca são guardados.
+builder.Services.AddMemoryCache();
 builder.Services.AddOutputCache(o => o.AddPolicy("Leitura", b => b.Expire(TimeSpan.FromSeconds(30)).SetVaryByQuery("*")));
 builder.Services.AddScoped<MissaoBackend.Services.ArmazenamentoService>();
 builder.Services.AddEndpointsApiExplorer();
