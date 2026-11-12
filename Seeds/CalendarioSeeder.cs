@@ -11,7 +11,7 @@ public static class CalendarioSeeder
 
     // Sobe quando o ficheiro do calendário de 2027 é corrigido: os dias já guardados são então
     // actualizados uma única vez (depois disso, edições feitas pelo administrador são respeitadas).
-    private const int VersaoActual = 2;
+    private const int VersaoActual = 3;
     private const string ChaveVersao = "Calendario2027.Versao";
 
     public static async Task SeedAsync(AppDbContext db)
