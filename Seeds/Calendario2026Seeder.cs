@@ -8,7 +8,7 @@ namespace MissaoBackend.Seeds;
 public static class Calendario2026Seeder
 {
     private const string ResourceName = "MissaoBackend.Seeds.Calendario2026.json";
-    private const int VersaoActual = 1;
+    private const int VersaoActual = 2;
     private const string ChaveVersao = "Calendario2026.Versao";
 
     public static async Task SeedAsync(AppDbContext db)
