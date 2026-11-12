@@ -71,12 +71,46 @@ public class LimitadorTentativas
     }
 }
 
+/// <summary>
+/// Travão ao início de sessão. A falha conta por e-mail + endereço (8 em 15 min), para que um terceiro não consiga
+/// bloquear a conta de outra pessoa só errando a palavra-passe; e há um teto mais alto só por e-mail (40 em 15 min)
+/// contra tentativas repartidas por muitos endereços.
+/// </summary>
+public class ProtecaoLogin
+{
+    private readonly LimitadorTentativas _porEmailEEndereco = new(8, TimeSpan.FromMinutes(15));
+    private readonly LimitadorTentativas _porEmail = new(40, TimeSpan.FromMinutes(15));
+
+    public bool Bloqueado(string email, string endereco) =>
+        _porEmailEEndereco.Excedeu(email + "|" + endereco) || _porEmail.Excedeu(email);
+
+    public void Falhou(string email, string endereco)
+    {
+        _porEmailEEndereco.Registar(email + "|" + endereco);
+        _porEmail.Registar(email);
+    }
+
+    public void Sucesso(string email, string endereco)
+    {
+        _porEmailEEndereco.Limpar(email + "|" + endereco);
+        _porEmail.Limpar(email);
+    }
+
+    /// <summary>Depois de redefinir a palavra-passe por código: levanta o bloqueio global do e-mail.</summary>
+    public void LimparEmail(string email) => _porEmail.Limpar(email);
+}
+
 public static class OrigemDoPedido
 {
-    /// <summary>Endereço de quem fez o pedido. Atrás do proxy do Render vem em X-Forwarded-For (o primeiro da lista).</summary>
+    /// <summary>
+    /// Endereço de quem fez o pedido. O primeiro valor de X-Forwarded-For é escrito pelo próprio cliente (qualquer um
+    /// pode enviar um inventado), por isso não serve para limites. Em produção o tráfego passa pelo Cloudflare do Render,
+    /// que escreve sempre CF-Connecting-IP com o endereço real; sem esse cabeçalho (ex.: testes locais) usa-se a ligação direta.
+    /// </summary>
     public static string Endereco(Microsoft.AspNetCore.Http.HttpContext contexto)
     {
-        var enc = contexto.Request.Headers["X-Forwarded-For"].ToString().Split(',')[0].Trim();
-        return !string.IsNullOrEmpty(enc) ? enc : contexto.Connection.RemoteIpAddress?.ToString() ?? "desconhecido";
+        var cf = contexto.Request.Headers["CF-Connecting-IP"].ToString().Trim();
+        if (!string.IsNullOrEmpty(cf) && cf.Length <= 45 && System.Net.IPAddress.TryParse(cf, out _)) return cf;
+        return contexto.Connection.RemoteIpAddress?.ToString() ?? "desconhecido";
     }
 }

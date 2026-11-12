@@ -42,6 +42,11 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
 
     <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="8.0.0" />
+
+    <!-- Versões fixadas porque as que vêm por arrasto (8.0.0 / 2.3.5) têm vulnerabilidades conhecidas (negação de serviço). -->
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="8.0.1" />
+    <PackageReference Include="MySqlConnector" Version="2.6.2" />
   </ItemGroup>
 
 </Project>

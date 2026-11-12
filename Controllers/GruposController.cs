@@ -139,9 +139,13 @@ public class GruposController : ControllerBase
         var eu = UtilizadorId();
         if (eu == null) return Unauthorized();
         var activos = await _db.MembrosGrupo.AsNoTracking().Where(m => m.UtilizadorId == eu && m.Estado == EstadoMembro.Activo).ToListAsync();
-        var naoLidas = 0;
-        foreach (var m in activos)
-            naoLidas += await _db.PublicacoesGrupo.CountAsync(p => p.GrupoId == m.GrupoId && p.Id > m.UltimaLeituraId && p.AutorId != eu);
+        // Uma só consulta para todos os grupos (antes era uma por grupo, e a base de dados está longe).
+        var naoLidas = await (
+            from m in _db.MembrosGrupo.AsNoTracking()
+            where m.UtilizadorId == eu && m.Estado == EstadoMembro.Activo
+            join p in _db.PublicacoesGrupo.AsNoTracking() on m.GrupoId equals p.GrupoId
+            where p.Id > m.UltimaLeituraId && p.AutorId != eu
+            select p.Id).CountAsync();
         var adminIds = activos.Where(m => m.Administrador).Select(m => m.GrupoId).ToList();
         var pedidos = adminIds.Count == 0 ? 0 : await _db.MembrosGrupo.CountAsync(m => adminIds.Contains(m.GrupoId) && m.Estado == EstadoMembro.Pedido);
         var convites = await _db.MembrosGrupo.CountAsync(m => m.UtilizadorId == eu && m.Estado == EstadoMembro.Convidado);

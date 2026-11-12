@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.EntityFrameworkCore;
 using MissaoBackend.Data;
 using MissaoBackend.Models;
+using MissaoBackend.Services;
 using MissaoBackend.Utils;
 
 namespace MissaoBackend.Controllers
@@ -209,12 +210,11 @@ namespace MissaoBackend.Controllers
             if (file == null || file.Length == 0)
                 return BadRequest("Nenhum ficheiro enviado.");
 
-            var ext = Path.GetExtension(file.FileName);
-            if (!string.Equals(ext, ".pdf", StringComparison.OrdinalIgnoreCase))
-                return BadRequest("Apenas ficheiros PDF são permitidos.");
+            var (url, erro) = await _armazenamento.GuardarValidadoAsync(file, TipoFicheiro.Pdf);
+            if (erro != null) return BadRequest(erro);
 
             var urlAnterior = cantico.PdfUrl;
-            cantico.PdfUrl = await _armazenamento.GuardarAsync(file);
+            cantico.PdfUrl = url;
             await _db.SaveChangesAsync();
             await _armazenamento.ApagarSeForNossoAsync(urlAnterior);
 

@@ -118,30 +118,42 @@ namespace MissaoBackend.Controllers
             if (imagem == null || imagem.Length == 0)
                 return BadRequest("Ficheiro inválido.");
 
-            var ext = Path.GetExtension(imagem.FileName).ToLowerInvariant();
-            if (ext is not (".jpg" or ".jpeg" or ".png" or ".webp"))
-                return BadRequest("Apenas imagens JPG, PNG ou WEBP são aceites.");
-
-            const long tamanhoMaximo = 5 * 1024 * 1024; // 5 MB
-            if (imagem.Length > tamanhoMaximo)
-                return BadRequest("A imagem não pode exceder 5 MB.");
-
-            var imagemUrl = await _armazenamento.GuardarAsync(imagem);
+            // Limite de tamanho e formato real (pelos bytes) tratados no serviço.
+            var (imagemUrl, erro) = await _armazenamento.GuardarValidadoAsync(imagem, MissaoBackend.Services.TipoFicheiro.Imagem);
+            if (erro != null) return BadRequest(erro);
             return Ok(new { imagemUrl });
+        }
+
+        // Limites razoáveis: evitam erros 500 da base de dados e valores absurdos (preço que estoira o total da encomenda).
+        private static string? ValidarProduto(Produto p)
+        {
+            if (string.IsNullOrWhiteSpace(p.Nome))
+                return "O nome é obrigatório.";
+            if (p.Nome.Trim().Length > 200)
+                return "O nome é demasiado longo (máximo 200 caracteres).";
+            if ((p.Descricao?.Trim().Length ?? 0) > 2000)
+                return "A descrição é demasiado longa (máximo 2000 caracteres).";
+            if ((p.Categoria?.Trim().Length ?? 0) > 100)
+                return "A categoria é demasiado longa (máximo 100 caracteres).";
+            if ((p.ImagemUrl?.Trim().Length ?? 0) > 500)
+                return "O endereço da imagem é demasiado longo.";
+            if (p.Preco < 0)
+                return "O preço não pode ser negativo.";
+            if (p.Preco > 1_000_000_000m || p.PrecoPromocional > 1_000_000_000m)
+                return "O preço é demasiado alto.";
+            if (p.PrecoPromocional is < 0)
+                return "O preço promocional não pode ser negativo.";
+            if (p.PrecoPromocional.HasValue && p.PrecoPromocional >= p.Preco)
+                return "O preço promocional tem de ser menor que o preço normal.";
+            return null;
         }
 
         [HttpPost]
         [Authorize(Policy = "Loja")]
         public async Task<ActionResult<Produto>> Create(Produto input)
         {
-            if (string.IsNullOrWhiteSpace(input.Nome))
-                return BadRequest("O nome é obrigatório.");
-            if (input.Preco < 0)
-                return BadRequest("O preço não pode ser negativo.");
-            if (input.PrecoPromocional is < 0)
-                return BadRequest("O preço promocional não pode ser negativo.");
-            if (input.PrecoPromocional.HasValue && input.PrecoPromocional >= input.Preco)
-                return BadRequest("O preço promocional tem de ser menor que o preço normal.");
+            var erroProduto = ValidarProduto(input);
+            if (erroProduto != null) return BadRequest(erroProduto);
 
             var produto = new Produto
             {
@@ -171,15 +183,10 @@ namespace MissaoBackend.Controllers
             if (existing == null) return NotFound();
             if (existing.LojaId != LojaIdAtual) return Forbid();
 
-            if (string.IsNullOrWhiteSpace(input.Nome))
-                return BadRequest("O nome é obrigatório.");
-            if (input.Preco < 0)
-                return BadRequest("O preço não pode ser negativo.");
-            if (input.PrecoPromocional is < 0)
-                return BadRequest("O preço promocional não pode ser negativo.");
-            if (input.PrecoPromocional.HasValue && input.PrecoPromocional >= input.Preco)
-                return BadRequest("O preço promocional tem de ser menor que o preço normal.");
+            var erroProduto = ValidarProduto(input);
+            if (erroProduto != null) return BadRequest(erroProduto);
 
+            var imagemAnterior = existing.ImagemUrl;
             existing.Nome = input.Nome.Trim();
             existing.Descricao = input.Descricao?.Trim();
             existing.Preco = input.Preco;
@@ -191,6 +198,9 @@ namespace MissaoBackend.Controllers
             existing.Ordem = input.Ordem;
 
             await _db.SaveChangesAsync();
+            // Substituiu a imagem: a antiga deixa de ser precisa (só se apaga se for um ficheiro nosso e já não for usada).
+            if (imagemAnterior != existing.ImagemUrl && !await _db.Produtos.AnyAsync(p => p.ImagemUrl == imagemAnterior))
+                await _armazenamento.ApagarSeForNossoAsync(imagemAnterior);
             return NoContent();
         }
 
@@ -206,8 +216,11 @@ namespace MissaoBackend.Controllers
             if (temEncomendas)
                 return BadRequest("Não é possível eliminar: já existem encomendas com este produto. Torne-o indisponível em vez de eliminar.");
 
+            var imagem = existing.ImagemUrl;
             _db.Produtos.Remove(existing);
             await _db.SaveChangesAsync();
+            if (!await _db.Produtos.AnyAsync(p => p.ImagemUrl == imagem))
+                await _armazenamento.ApagarSeForNossoAsync(imagem);
             return NoContent();
         }
 

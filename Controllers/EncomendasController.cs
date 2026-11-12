@@ -78,6 +78,8 @@ namespace MissaoBackend.Controllers
         // vista do comprador, mas cada loja só vê e gere a sua parte).
         // Evita que alguém encha as lojas de encomendas falsas (o pedido é anónimo).
         private static readonly LimitadorTentativas EncomendasPorEndereco = new(20, TimeSpan.FromHours(1));
+        private const int MaxLinhas = 50;
+        private const int MaxQuantidade = 1000;
 
         [HttpPost]
         public async Task<IActionResult> Create(NovaEncomenda input)
@@ -91,6 +93,14 @@ namespace MissaoBackend.Controllers
                 return BadRequest("A encomenda tem de ter pelo menos um artigo.");
             if (input.Itens.Any(i => i.Quantidade <= 0))
                 return BadRequest("A quantidade de cada artigo tem de ser maior que zero.");
+            if (input.Itens.Count > MaxLinhas || input.Itens.Any(i => i.Quantidade > MaxQuantidade))
+                return BadRequest($"Uma encomenda pode ter no máximo {MaxLinhas} artigos diferentes e {MaxQuantidade} unidades de cada.");
+            if (input.NomeCliente.Trim().Length > 100 || input.Contacto.Trim().Length > 100)
+                return BadRequest("O nome e o contacto não podem ter mais de 100 caracteres.");
+            if ((input.Morada?.Trim().Length ?? 0) > 300)
+                return BadRequest("A morada não pode ter mais de 300 caracteres.");
+            if ((input.Observacoes?.Trim().Length ?? 0) > 1000)
+                return BadRequest("As observações não podem ter mais de 1000 caracteres.");
 
             var produtoIds = input.Itens.Select(i => i.ProdutoId).ToList();
             var produtos = await _db.Produtos
@@ -102,7 +112,14 @@ namespace MissaoBackend.Controllers
             {
                 var produto = produtos.FirstOrDefault(p => p.Id == linha.ProdutoId);
                 if (produto == null || !produto.Disponivel || produto.Loja == null || !produto.Loja.Aprovada || !produto.Loja.Ativa)
-                    return BadRequest($"O artigo com id {linha.ProdutoId} já não está disponível.");
+                {
+                    // O cabeçalho deixa a app tirar este artigo do carrinho, para o comprador não ficar preso ao mesmo erro.
+                    Response.Headers["X-Produto-Indisponivel"] = linha.ProdutoId.ToString();
+                    Response.Headers["Access-Control-Expose-Headers"] = "X-Produto-Indisponivel";
+                    return BadRequest(produto != null
+                        ? $"O artigo \"{produto.Nome}\" já não está disponível. Retire-o do carrinho para continuar."
+                        : "Um dos artigos do carrinho já não existe. Retire-o do carrinho para continuar.");
+                }
             }
 
             var grupoId = Guid.NewGuid();
@@ -183,18 +200,21 @@ namespace MissaoBackend.Controllers
 
         private static string MontarEmailNovaEncomenda(Encomenda enc)
         {
+            // Tudo o que vem do comprador (anónimo) ou das lojas é escapado: sem isto dava para meter links
+            // e texto enganador num e-mail que sai com o nome da Ndatava.
+            static string H(string? t) => System.Net.WebUtility.HtmlEncode(t ?? "");
             var itensHtml = string.Join("", enc.Itens.Select(i =>
-                $"<tr><td style='padding:4px 8px;'>{i.Quantidade}× {i.ProdutoNome}</td>" +
+                $"<tr><td style='padding:4px 8px;'>{i.Quantidade}× {H(i.ProdutoNome)}</td>" +
                 $"<td style='padding:4px 8px;text-align:right;'>{Moeda.Formatar(i.PrecoUnitario * i.Quantidade, enc.Moeda)}</td></tr>"));
 
             return $@"
                 <div style='font-family:sans-serif;color:#222;'>
                     <h2 style='margin-bottom:4px;'>Nova encomenda recebida</h2>
                     <p style='color:#666;'>Referência #{enc.Id} · {enc.Data:dd/MM/yyyy HH:mm}</p>
-                    <p><strong>Cliente:</strong> {enc.NomeCliente}<br/>
-                       <strong>Contacto:</strong> {enc.Contacto}
-                       {(string.IsNullOrWhiteSpace(enc.Morada) ? "" : $"<br/><strong>Morada:</strong> {enc.Morada}")}
-                       {(string.IsNullOrWhiteSpace(enc.Observacoes) ? "" : $"<br/><strong>Observações:</strong> {enc.Observacoes}")}
+                    <p><strong>Cliente:</strong> {H(enc.NomeCliente)}<br/>
+                       <strong>Contacto:</strong> {H(enc.Contacto)}
+                       {(string.IsNullOrWhiteSpace(enc.Morada) ? "" : $"<br/><strong>Morada:</strong> {H(enc.Morada)}")}
+                       {(string.IsNullOrWhiteSpace(enc.Observacoes) ? "" : $"<br/><strong>Observações:</strong> {H(enc.Observacoes)}")}
                     </p>
                     <table style='border-collapse:collapse;width:100%;max-width:400px;margin-top:12px;'>
                         {itensHtml}

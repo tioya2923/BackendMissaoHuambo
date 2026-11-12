@@ -27,7 +27,7 @@ public class AuthController : ControllerBase
     public record LoginResponse(string Token, string Nome, string Email);
 
     // Trava a adivinhação da palavra-passe do administrador (por email).
-    private static readonly LimitadorTentativas FalhasDeLogin = new(8, TimeSpan.FromMinutes(15));
+    private static readonly ProtecaoLogin FalhasDeLogin = new();
 
     [HttpPost("login")]
     [Produces("application/json")]
@@ -36,17 +36,19 @@ public class AuthController : ControllerBase
         if (string.IsNullOrWhiteSpace(req.Email) || string.IsNullOrWhiteSpace(req.Password))
             return BadRequest("Email e password são obrigatórios.");
 
-        var chave = req.Email.Trim().ToLowerInvariant();
-        if (FalhasDeLogin.Excedeu(chave))
+        var emailEntrada = req.Email.Trim();
+        var chave = emailEntrada.ToLowerInvariant();
+        var endereco = OrigemDoPedido.Endereco(HttpContext);
+        if (FalhasDeLogin.Bloqueado(chave, endereco))
             return StatusCode(429, "Demasiadas tentativas. Tente novamente dentro de alguns minutos.");
 
-        var gestor = await _db.Gestores.FirstOrDefaultAsync(g => g.Email == req.Email);
+        var gestor = await _db.Gestores.FirstOrDefaultAsync(g => g.Email == emailEntrada);
         if (gestor == null || !PasswordHasher.Verify(req.Password, gestor.Password))
         {
-            FalhasDeLogin.Registar(chave);
+            FalhasDeLogin.Falhou(chave, endereco);
             return Unauthorized("Credenciais inválidas.");
         }
-        FalhasDeLogin.Limpar(chave);
+        FalhasDeLogin.Sucesso(chave, endereco);
 
         var claims = new[]
         {
@@ -68,7 +70,7 @@ public class AuthController : ControllerBase
         return Ok(new LoginResponse(tokenString, gestor.Nome, gestor.Email));
     }
 
-    public record AlterarCredenciaisRequest(string NovoEmail, string NovaPassword);
+    public record AlterarCredenciaisRequest(string PasswordAtual, string NovoEmail, string NovaPassword);
 
     // PUT /api/auth/gestor/credenciais — o próprio Gestor autenticado muda o seu email e/ou
     // password (ex.: para rodar credenciais comprometidas, sem precisar de acesso à base de dados).
@@ -76,14 +78,30 @@ public class AuthController : ControllerBase
     [Authorize(Policy = "Gestor")]
     public async Task<IActionResult> AlterarCredenciaisGestor(AlterarCredenciaisRequest req)
     {
-        if (string.IsNullOrWhiteSpace(req.NovoEmail) || string.IsNullOrWhiteSpace(req.NovaPassword))
-            return BadRequest("Email e password são obrigatórios.");
-        if (req.NovaPassword.Length < 6)
-            return BadRequest("A password tem de ter pelo menos 6 caracteres.");
+        if (string.IsNullOrWhiteSpace(req.PasswordAtual) || string.IsNullOrWhiteSpace(req.NovoEmail) || string.IsNullOrWhiteSpace(req.NovaPassword))
+            return BadRequest("Password atual, email e password nova são obrigatórios.");
+        if (req.NovaPassword.Length < 10)
+            return BadRequest("A password nova tem de ter pelo menos 10 caracteres.");
+        if (req.NovaPassword.Length > 100)
+            return BadRequest("A password nova é demasiado longa (máximo 100 caracteres).");
+        if (!req.NovoEmail.Contains('@'))
+            return BadRequest("Indique um email válido.");
 
         var gestorId = int.Parse(User.FindFirstValue("gestorId") ?? throw new InvalidOperationException("Token sem gestorId."));
         var gestor = await _db.Gestores.FindAsync(gestorId);
         if (gestor == null) return NotFound();
+
+        // Um token roubado não chega para tomar a conta: é preciso saber a password atual.
+        var endereco = OrigemDoPedido.Endereco(HttpContext);
+        var chaveGestor = "gestor:" + gestor.Id;
+        if (FalhasDeLogin.Bloqueado(chaveGestor, endereco))
+            return StatusCode(429, "Demasiadas tentativas. Tente novamente dentro de alguns minutos.");
+        if (!PasswordHasher.Verify(req.PasswordAtual, gestor.Password))
+        {
+            FalhasDeLogin.Falhou(chaveGestor, endereco);
+            return BadRequest("A password atual está incorreta.");
+        }
+        FalhasDeLogin.Sucesso(chaveGestor, endereco);
 
         var novoEmail = req.NovoEmail.Trim();
         if (await _db.Gestores.AnyAsync(g => g.Email == novoEmail && g.Id != gestorId))

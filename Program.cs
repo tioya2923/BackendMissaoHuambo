@@ -65,6 +65,9 @@ builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(options =>
 {
+        // Dois controladores têm um tipo aninhado com o mesmo nome (ex.: DenunciarRequest): sem o nome completo o swagger.json dava erro 500.
+        options.CustomSchemaIds(t => (t.FullName ?? t.Name).Replace("MissaoBackend.", "").Replace('+', '.'));
+
         options.SwaggerDoc("v1", new OpenApiInfo
         {
             Title = "Ndatava API",
@@ -138,12 +141,16 @@ var app = builder.Build();
 
 // --- PIPELINE DE MIDDLEWARE ---
 
-app.UseSwagger();
-app.UseSwaggerUI(c =>
+// A documentação da API só fica disponível em desenvolvimento: em produção não é preciso expor o mapa completo dos endpoints.
+if (app.Environment.IsDevelopment() || Environment.GetEnvironmentVariable("SWAGGER_ATIVO") == "1")
 {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Ndatava API v1");
-    c.RoutePrefix = "swagger";
-});
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Ndatava API v1");
+        c.RoutePrefix = "swagger";
+    });
+}
 
 app.UseStaticFiles();
 app.UseRouting();
@@ -166,12 +173,24 @@ app.MapGet("/privacidade", (HttpContext ctx) =>
 // --- MIGRATIONS E SEED DATA ---
 using (var scope = app.Services.CreateScope())
 {
+    var migracoesAplicadas = false;
     try
     {
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         Console.WriteLine("→ Aplicando migrations...");
-        await db.Database.MigrateAsync();
+        // A base de dados é remota e pode demorar a responder ao arranque: tenta 3 vezes.
+        // Se continuar sem funcionar, o arranque falha de propósito (o Render mantém a versão anterior a funcionar
+        // em vez de pôr no ar um servidor sem base de dados).
+        for (var tentativa = 1; ; tentativa++)
+        {
+            try { await db.Database.MigrateAsync(); migracoesAplicadas = true; break; }
+            catch (Exception ex) when (tentativa < 3)
+            {
+                Console.WriteLine($"✗ Migrações falharam (tentativa {tentativa}/3): {ex.Message}");
+                await Task.Delay(TimeSpan.FromSeconds(5 * tentativa));
+            }
+        }
 
         if (await db.Database.CanConnectAsync())
             Console.WriteLine("✓ Ligação à base de dados bem-sucedida!");
@@ -249,32 +268,15 @@ using (var scope = app.Services.CreateScope())
             await db.SaveChangesAsync();
             Console.WriteLine($"✓ Password do administrador migrada para hash.");
         }
-
-        // Seed CanticoUmb
-        if (!await db.CanticosUmb.AnyAsync())
-        {
-            var topico = await db.TopicosUmb.FirstOrDefaultAsync();
-            if (topico != null)
-            {
-                var cantico = new CanticoUmb
-                {
-                    Titulo = "Cantico de Teste",
-                    Slug = SlugHelper.Slugify("Cantico de Teste"),
-                    Letra = "Letra de teste...",
-                    TopicoId = topico.Id
-                };
-
-                db.CanticosUmb.Add(cantico);
-                await db.SaveChangesAsync();
-                Console.WriteLine($"✓ CanticoUmb seeded: {cantico.Titulo}");
-            }
-        }
     }
     catch (Exception ex)
     {
         Console.WriteLine("✗ Erro durante a inicialização: " + ex.Message);
         if (ex.InnerException != null)
             Console.WriteLine("Inner Exception: " + ex.InnerException.Message);
+        // Sem migrações aplicadas o servidor respondia com erro a todos os pedidos: nesse caso o arranque falha de propósito.
+        // Um problema só num seed de conteúdo é registado, mas não deita o site abaixo.
+        if (!migracoesAplicadas) throw;
     }
 }
 

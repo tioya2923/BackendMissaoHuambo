@@ -22,5 +22,8 @@ COPY --from=build /app/out ./
 ENV ASPNETCORE_URLS=http://+:10000
 EXPOSE 10000
 
+# Corre sem privilégios de administrador (o utilizador "app" já vem na imagem do .NET 8).
+USER app
+
 # Comando de inicialização
 ENTRYPOINT ["dotnet", "MissaoBackend.dll"]

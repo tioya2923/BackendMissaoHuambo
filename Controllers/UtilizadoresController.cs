@@ -22,7 +22,7 @@ public class UtilizadoresController : ControllerBase
     private readonly ArmazenamentoService _armazenamento;
 
     // Travam adivinhação de palavras-passe (por email) e criação massiva de contas (por endereço).
-    private static readonly LimitadorTentativas FalhasDeLogin = new(8, TimeSpan.FromMinutes(15));
+    private static readonly ProtecaoLogin FalhasDeLogin = new();
     private static readonly LimitadorTentativas RegistosPorEndereco = new(
         int.TryParse(Environment.GetEnvironmentVariable("LIMITE_REGISTOS_HORA"), out var lim) ? lim : 30, TimeSpan.FromHours(1));
 
@@ -163,7 +163,8 @@ public class UtilizadoresController : ControllerBase
             return BadRequest("Email e password são obrigatórios.");
 
         var chaveEmail = req.Email.Trim().ToLower();
-        if (FalhasDeLogin.Excedeu(chaveEmail))
+        var endereco = OrigemDoPedido.Endereco(HttpContext);
+        if (FalhasDeLogin.Bloqueado(chaveEmail, endereco))
             return StatusCode(429, "Demasiadas tentativas. Tente novamente dentro de alguns minutos.");
 
         var utilizador = await _db.Utilizadores
@@ -171,10 +172,10 @@ public class UtilizadoresController : ControllerBase
 
         if (utilizador == null || !PasswordHasher.Verify(req.Password, utilizador.Password))
         {
-            FalhasDeLogin.Registar(chaveEmail);
+            FalhasDeLogin.Falhou(chaveEmail, endereco);
             return Unauthorized("Credenciais inválidas.");
         }
-        FalhasDeLogin.Limpar(chaveEmail);
+        FalhasDeLogin.Sucesso(chaveEmail, endereco);
 
         return Ok(new AuthResponse(GerarToken(utilizador), utilizador.Nome, utilizador.Email));
     }
@@ -197,7 +198,12 @@ public class UtilizadoresController : ControllerBase
         var resposta = Ok(new { mensagem = "Se existir uma conta com este email, enviámos um código de 6 dígitos, válido durante 15 minutos." });
 
         var utilizador = await _db.Utilizadores.FirstOrDefaultAsync(u => u.Email == email);
-        if (utilizador == null) return resposta;
+        if (utilizador == null)
+        {
+            // Gasta o mesmo tempo (hash) que no caso de a conta existir, para o tempo de resposta não revelar quem está registado.
+            PasswordHasher.Hash(RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6"));
+            return resposta;
+        }
 
         var agora = DateTime.UtcNow;
         // Um código novo invalida os anteriores; apaga os que já têm mais de um dia.
@@ -268,7 +274,7 @@ public class UtilizadoresController : ControllerBase
         await _db.SaveChangesAsync();
 
         FalhasDeRedefinicao.Limpar(email);
-        FalhasDeLogin.Limpar(email);
+        FalhasDeLogin.LimparEmail(email);
         return Ok(new AuthResponse(GerarToken(utilizador), utilizador.Nome, utilizador.Email));
     }
 
@@ -353,6 +359,12 @@ public class UtilizadoresController : ControllerBase
             return BadRequest("Nome, email e password inicial são obrigatórios.");
 
         var email = req.Email.Trim().ToLower();
+        if (!email.Contains('@') || email.Length > 200)
+            return BadRequest("Indique um email válido.");
+        if (req.PasswordInicial.Length < 8 || req.PasswordInicial.Length > 100)
+            return BadRequest("A palavra-passe inicial deve ter entre 8 e 100 caracteres.");
+        if (req.Nome.Trim().Length > 100)
+            return BadRequest("O nome é demasiado longo (máximo 100 caracteres).");
         if (await _db.Utilizadores.AnyAsync(u => u.Email == email))
             return Conflict("Este email já está registado.");
 
@@ -413,8 +425,12 @@ public class UtilizadoresController : ControllerBase
         var u = await _db.Utilizadores.FindAsync(id);
         if (u == null) return NotFound();
 
+        // Mesmas regras da eliminação pela própria pessoa: grupos entregues ou apagados, foto removida.
+        await GruposRegras.PrepararEliminacaoConta(_db, u.Id);
+        var foto = u.FotoUrl;
         _db.Utilizadores.Remove(u);
         await _db.SaveChangesAsync();
+        await _armazenamento.ApagarSeForNossoAsync(foto);
         return NoContent();
     }
 
@@ -428,9 +444,12 @@ public class UtilizadoresController : ControllerBase
         if (u == null) return NotFound();
         // Entrega a administração dos grupos que ficariam sem administrador (ou apaga-os se ficarem vazios).
         await GruposRegras.PrepararEliminacaoConta(_db, u.Id);
+        var foto = u.FotoUrl;
         // Partilhas enviadas e recebidas, gravações, contactos e bloqueios desta conta são apagados em cascata.
         _db.Utilizadores.Remove(u);
         await _db.SaveChangesAsync();
+        // A foto de perfil vive noutra tabela e é pública por endereço: tem de sair com a conta.
+        await _armazenamento.ApagarSeForNossoAsync(foto);
         return NoContent();
     }
 
@@ -447,12 +466,11 @@ public class UtilizadoresController : ControllerBase
         if (foto == null || foto.Length == 0)
             return BadRequest("Ficheiro inválido.");
 
-        var ext = Path.GetExtension(foto.FileName).ToLowerInvariant();
-        if (ext is not (".jpg" or ".jpeg" or ".png" or ".webp"))
-            return BadRequest("Apenas imagens JPG, PNG ou WEBP são aceites.");
+        var (url, erro) = await _armazenamento.GuardarValidadoAsync(foto, TipoFicheiro.Imagem);
+        if (erro != null) return BadRequest(erro);
 
         var urlAnterior = u.FotoUrl;
-        u.FotoUrl = await _armazenamento.GuardarAsync(foto);
+        u.FotoUrl = url;
         await _db.SaveChangesAsync();
         await _armazenamento.ApagarSeForNossoAsync(urlAnterior);
 

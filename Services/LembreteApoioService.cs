@@ -56,20 +56,24 @@ public class LembreteApoioService : BackgroundService
         }
     }
 
-    // Só envia perto do fim do mês (últimos dois dias), e no máximo uma vez por mês —
-    // controlado pela chave gravada em ConfiguracaoSistema, para sobreviver a reinícios.
+    // Só envia perto do fim do mês (últimos cinco dias, para haver várias hipóteses se o servidor
+    // estiver parado ou o envio falhar) e no máximo uma vez por mês — controlado pela chave gravada
+    // em ConfiguracaoSistema, para sobreviver a reinícios. O mês só fica marcado como enviado se
+    // pelo menos um e-mail saiu mesmo; se o SMTP falhar, volta a tentar na verificação seguinte.
     public static async Task<bool> VerificarEEnviarSeNecessarioAsync(
         AppDbContext db, IConfiguration config, DateTime agora, CancellationToken ct = default)
     {
         var diasNoMes = DateTime.DaysInMonth(agora.Year, agora.Month);
-        var pertoDoFimDoMes = agora.Day >= diasNoMes - 1;
+        var pertoDoFimDoMes = agora.Day >= diasNoMes - 4;
         if (!pertoDoFimDoMes) return false;
 
         var chaveMes = agora.ToString("yyyy-MM");
         var estado = await db.ConfiguracaoSistema.FirstOrDefaultAsync(c => c.Chave == ChaveEstado, ct);
         if (estado?.Valor == chaveMes) return false; // já enviado este mês
 
-        await EnviarParaTodasAsLojasAsync(db, config, agora, ct);
+        var enviados = await EnviarParaTodasAsLojasAsync(db, config, agora, ct);
+        // Se há lojas e não saiu nenhum e-mail, não marca o mês: tenta de novo mais tarde.
+        if (enviados == 0 && await db.Lojas.AnyAsync(l => l.Aprovada && l.Ativa && l.Email != "", ct)) return false;
 
         if (estado == null)
             db.ConfiguracaoSistema.Add(new ConfiguracaoSistema { Chave = ChaveEstado, Valor = chaveMes });
@@ -116,8 +120,8 @@ public class LembreteApoioService : BackgroundService
             var assunto = $"Obrigado por fazer parte da Ndatava, {loja.Nome}";
             var corpo = MontarEmail(loja.Nome, referencia, totalVendido, vendas.Count, loja.Moeda, formasApoio, config);
 
-            await EmailService.EnviarAsync(config, loja.Email, assunto, corpo);
-            enviados++;
+            if (await EmailService.EnviarAsync(config, loja.Email, assunto, corpo))
+                enviados++;
         }
         return enviados;
     }
@@ -185,7 +189,7 @@ public class LembreteApoioService : BackgroundService
                     </a>
                 </p>
                 <p style='color:#666;font-size:13px;margin-top:26px;'>
-                    Obrigado, {nomeLoja}, por fazer parte desta comunidade.
+                    Obrigado, {WebUtility.HtmlEncode(nomeLoja)}, por fazer parte desta comunidade.
                 </p>
             </div>";
     }

@@ -44,6 +44,13 @@ public class VersaoAppController : ControllerBase
     [Authorize(Policy = "Gestor")]
     public async Task<IActionResult> Atualizar([FromBody] VersaoAppDto input)
     {
+        // O endereço de descarga é aberto pela app: só se aceita https (ou vazio), nunca outros esquemas.
+        if (!string.IsNullOrWhiteSpace(input.UrlDownload)
+            && !(Uri.TryCreate(input.UrlDownload.Trim(), UriKind.Absolute, out var url) && url.Scheme == Uri.UriSchemeHttps))
+            return BadRequest("O endereço de descarga tem de começar por https://");
+        if ((input.Mensagem?.Length ?? 0) > 500)
+            return BadRequest("A mensagem é demasiado longa (máximo 500 caracteres).");
+
         await DefinirAsync(ChaveRecomendada, input.VersaoRecomendada);
         await DefinirAsync(ChaveMinima, input.VersaoMinima);
         await DefinirAsync(ChaveUrl, input.UrlDownload);

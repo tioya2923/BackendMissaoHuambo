@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MissaoBackend.Data;
+using MissaoBackend.Services;
 using MissaoBackend.Models;
 using MissaoBackend.Utils;
 
@@ -191,8 +192,11 @@ public class KimbunduCanticosController : ControllerBase
         if (file == null || file.Length == 0)
             return BadRequest("Nenhum ficheiro enviado.");
 
+        var (url, erro) = await _armazenamento.GuardarValidadoAsync(file, TipoFicheiro.Pdf);
+        if (erro != null) return BadRequest(erro);
+
         var urlAnterior = cantico.PdfUrl;
-        cantico.PdfUrl = await _armazenamento.GuardarAsync(file);
+        cantico.PdfUrl = url;
         await _db.SaveChangesAsync();
         await _armazenamento.ApagarSeForNossoAsync(urlAnterior);
 

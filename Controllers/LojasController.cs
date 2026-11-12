@@ -14,12 +14,16 @@ namespace MissaoBackend.Controllers
     {
         private readonly AppDbContext _db;
         private readonly IConfiguration _config;
+        private readonly ArmazenamentoService _armazenamento;
 
-        public LojasController(AppDbContext db, IConfiguration config)
+        public LojasController(AppDbContext db, IConfiguration config, ArmazenamentoService armazenamento)
         {
             _db = db;
             _config = config;
+            _armazenamento = armazenamento;
         }
+
+        private const int MinPassword = 8;
 
         private int LojaIdAtual =>
             int.Parse(User.FindFirstValue("lojaId") ?? throw new InvalidOperationException("Token sem lojaId."));
@@ -55,11 +59,20 @@ namespace MissaoBackend.Controllers
         {
             if (string.IsNullOrWhiteSpace(req.Nome) || string.IsNullOrWhiteSpace(req.Email) || string.IsNullOrWhiteSpace(req.Password))
                 return BadRequest("Nome, email e password são obrigatórios.");
-            if (req.Password.Length < 6)
-                return BadRequest("A password tem de ter pelo menos 6 caracteres.");
+            var emailLoja = req.Email.Trim();
+            if (!emailLoja.Contains('@') || emailLoja.Length > 200)
+                return BadRequest("Indique um email válido.");
+            if (req.Nome.Trim().Length > 150)
+                return BadRequest("O nome da loja é demasiado longo (máximo 150 caracteres).");
+            if (req.Password.Length < MinPassword)
+                return BadRequest($"A password tem de ter pelo menos {MinPassword} caracteres.");
+            if (req.Password.Length > 100)
+                return BadRequest("A password é demasiado longa (máximo 100 caracteres).");
+            if (!CoordenadasValidas(req.Latitude, req.Longitude))
+                return BadRequest("A localização indicada é inválida.");
             if (!RegistosPorEndereco.Permitir(OrigemDoPedido.Endereco(HttpContext)))
                 return StatusCode(429, "Foram criados demasiados registos a partir desta ligação. Tente mais tarde.");
-            if (await _db.Lojas.AnyAsync(l => l.Email == req.Email))
+            if (await _db.Lojas.AnyAsync(l => l.Email == emailLoja))
                 return BadRequest("Já existe uma loja registada com este email.");
             if (req.Moeda != null && !Moeda.EhValida(req.Moeda))
                 return BadRequest($"Moeda inválida. Use uma de: {string.Join(", ", Moeda.Todas)}.");
@@ -67,7 +80,7 @@ namespace MissaoBackend.Controllers
             var loja = new Loja
             {
                 Nome = req.Nome.Trim(),
-                Email = req.Email.Trim(),
+                Email = emailLoja,
                 Password = PasswordHasher.Hash(req.Password),
                 Telefone = req.Telefone?.Trim(),
                 Morada = req.Morada?.Trim(),
@@ -88,8 +101,11 @@ namespace MissaoBackend.Controllers
         }
 
         // Travam adivinhação de palavras-passe (por email) e criação massiva de lojas (por endereço).
-        private static readonly LimitadorTentativas FalhasDeLogin = new(8, TimeSpan.FromMinutes(15));
+        private static readonly ProtecaoLogin FalhasDeLogin = new();
         private static readonly LimitadorTentativas RegistosPorEndereco = new(10, TimeSpan.FromHours(1));
+
+        private static bool CoordenadasValidas(double lat, double lng) =>
+            !double.IsNaN(lat) && !double.IsNaN(lng) && lat is >= -90 and <= 90 && lng is >= -180 and <= 180;
 
         [HttpPost("login")]
         public async Task<IActionResult> Login(LojaLoginRequest req)
@@ -97,17 +113,20 @@ namespace MissaoBackend.Controllers
             if (string.IsNullOrWhiteSpace(req.Email) || string.IsNullOrWhiteSpace(req.Password))
                 return BadRequest("Email e password são obrigatórios.");
 
-            var chave = req.Email.Trim().ToLowerInvariant();
-            if (FalhasDeLogin.Excedeu(chave))
+            // Sem espaços nas pontas: os teclados dos telemóveis costumam acrescentar um espaço no fim.
+            var emailEntrada = req.Email.Trim();
+            var chave = emailEntrada.ToLowerInvariant();
+            var endereco = OrigemDoPedido.Endereco(HttpContext);
+            if (FalhasDeLogin.Bloqueado(chave, endereco))
                 return StatusCode(429, "Demasiadas tentativas. Tente novamente dentro de alguns minutos.");
 
-            var loja = await _db.Lojas.FirstOrDefaultAsync(l => l.Email == req.Email);
+            var loja = await _db.Lojas.FirstOrDefaultAsync(l => l.Email == emailEntrada);
             if (loja == null || !PasswordHasher.Verify(req.Password, loja.Password))
             {
-                FalhasDeLogin.Registar(chave);
+                FalhasDeLogin.Falhou(chave, endereco);
                 return Unauthorized("Credenciais inválidas.");
             }
-            FalhasDeLogin.Limpar(chave);
+            FalhasDeLogin.Sucesso(chave, endereco);
 
             var token = EmitirToken(loja);
             return Ok(new LojaLoginResponse(token, loja.Id, loja.Nome, loja.Aprovada));
@@ -142,7 +161,12 @@ namespace MissaoBackend.Controllers
             var resposta = Ok(new { mensagem = "Se existir uma loja com este email, enviámos um código de 6 dígitos, válido durante 15 minutos." });
 
             var loja = await _db.Lojas.FirstOrDefaultAsync(l => l.Email == email);
-            if (loja == null) return resposta;
+            if (loja == null)
+            {
+                // Gasta o mesmo tempo (hash) que se a loja existisse, para o tempo de resposta não revelar quem está registado.
+                PasswordHasher.Hash(System.Security.Cryptography.RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6"));
+                return resposta;
+            }
 
             var agora = DateTime.UtcNow;
             // Um código novo invalida os anteriores; apaga os que já têm mais de um dia.
@@ -181,7 +205,7 @@ namespace MissaoBackend.Controllers
             if (string.IsNullOrWhiteSpace(req?.Email) || string.IsNullOrWhiteSpace(req.Codigo) || string.IsNullOrEmpty(req.NovaPassword))
                 return BadRequest("Preencha o email, o código e a palavra-passe nova.");
             // Mesmo mínimo do registo das lojas.
-            if (req.NovaPassword.Length < 6) return BadRequest("A palavra-passe deve ter pelo menos 6 caracteres.");
+            if (req.NovaPassword.Length < MinPassword) return BadRequest($"A palavra-passe deve ter pelo menos {MinPassword} caracteres.");
             if (req.NovaPassword.Length > 100) return BadRequest("A palavra-passe é demasiado longa (máximo 100 caracteres).");
 
             var email = req.Email.Trim().ToLowerInvariant();
@@ -214,7 +238,7 @@ namespace MissaoBackend.Controllers
             await _db.SaveChangesAsync();
 
             FalhasDeRedefinicao.Limpar(email);
-            FalhasDeLogin.Limpar(email);
+            FalhasDeLogin.LimparEmail(email);
             return Ok(new LojaLoginResponse(EmitirToken(loja), loja.Id, loja.Nome, loja.Aprovada));
         }
 
@@ -338,6 +362,10 @@ namespace MissaoBackend.Controllers
                 return BadRequest("O nome é obrigatório.");
             if (req.Moeda != null && !Moeda.EhValida(req.Moeda))
                 return BadRequest($"Moeda inválida. Use uma de: {string.Join(", ", Moeda.Todas)}.");
+            if (req.Nome.Trim().Length > 150)
+                return BadRequest("O nome da loja é demasiado longo (máximo 150 caracteres).");
+            if (!CoordenadasValidas(req.Latitude, req.Longitude))
+                return BadRequest("A localização indicada é inválida.");
 
             if (req.FormasPagamento != null)
             {
@@ -410,13 +438,16 @@ namespace MissaoBackend.Controllers
 
             if (!temEncomendas)
             {
+                var imagens = new List<string?>();
                 if (produtoIds.Count > 0)
                 {
                     var produtos = await _db.Produtos.Where(p => produtoIds.Contains(p.Id)).ToListAsync();
+                    imagens.AddRange(produtos.Select(p => p.ImagemUrl));
                     _db.Produtos.RemoveRange(produtos);
                 }
                 _db.Lojas.Remove(loja);
                 await _db.SaveChangesAsync();
+                await ApagarImagensSemUsoAsync(imagens);
                 return NoContent();
             }
 
@@ -434,14 +465,30 @@ namespace MissaoBackend.Controllers
             loja.Aprovada = false;
             loja.Ativa = false;
 
+            var imagensDesativadas = new List<string?>();
             if (produtoIds.Count > 0)
             {
                 var produtos = await _db.Produtos.Where(p => produtoIds.Contains(p.Id)).ToListAsync();
-                foreach (var p in produtos) p.Disponivel = false;
+                foreach (var p in produtos)
+                {
+                    p.Disponivel = false;
+                    // Os produtos ficam (histórico de encomendas), mas as fotos da loja saem.
+                    imagensDesativadas.Add(p.ImagemUrl);
+                    p.ImagemUrl = null;
+                }
             }
 
             await _db.SaveChangesAsync();
+            await ApagarImagensSemUsoAsync(imagensDesativadas);
             return NoContent();
+        }
+
+        // Apaga os ficheiros de imagem que já nenhum produto usa.
+        private async Task ApagarImagensSemUsoAsync(IEnumerable<string?> urls)
+        {
+            foreach (var url in urls.Where(u => !string.IsNullOrWhiteSpace(u)).Distinct())
+                if (!await _db.Produtos.AnyAsync(p => p.ImagemUrl == url))
+                    await _armazenamento.ApagarSeForNossoAsync(url);
         }
 
         // ── Moderação pelo Gestor ────────────────────────────────────────────

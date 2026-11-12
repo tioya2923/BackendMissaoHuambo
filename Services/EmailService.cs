@@ -9,7 +9,8 @@ namespace MissaoBackend.Services;
 // nem falhar a operação principal (ex.: criar uma encomenda) por falta de email.
 public static class EmailService
 {
-    public static async Task EnviarAsync(IConfiguration config, string destinatario, string assunto, string corpoHtml)
+    /// <summary>Devolve verdadeiro só se o e-mail foi mesmo entregue ao servidor SMTP (falso se o SMTP não está configurado ou falhou).</summary>
+    public static async Task<bool> EnviarAsync(IConfiguration config, string destinatario, string assunto, string corpoHtml)
     {
         var host = Environment.GetEnvironmentVariable("SMTP_HOST") ?? config["Smtp:Host"];
         var portaTxt = Environment.GetEnvironmentVariable("SMTP_PORT") ?? config["Smtp:Port"];
@@ -20,7 +21,7 @@ public static class EmailService
         if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(utilizador) || string.IsNullOrWhiteSpace(password))
         {
             Console.WriteLine("⚠ Email não enviado (SMTP não configurado): " + assunto);
-            return;
+            return false;
         }
 
         var porta = int.TryParse(portaTxt, out var p) ? p : 587;
@@ -43,11 +44,13 @@ public static class EmailService
             mensagem.To.Add(destinatario);
 
             await cliente.SendMailAsync(mensagem);
+            return true;
         }
         catch (Exception ex)
         {
             // Nunca deixa uma falha de email rebentar a operação principal.
             Console.WriteLine($"⚠ Falha ao enviar email para {destinatario}: {ex.Message}");
+            return false;
         }
     }
 }
