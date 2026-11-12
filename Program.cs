@@ -195,7 +195,8 @@ using (var scope = app.Services.CreateScope())
         // Seed Cânticos Oshikwanhama
         await CanticoOtcSeeder.SeedAsync(db);
 
-        // Seed Calendário Litúrgico 2027
+        // Seed Calendários Litúrgicos 2026 e 2027
+        await Calendario2026Seeder.SeedAsync(db);
         await CalendarioSeeder.SeedAsync(db);
 
         // Seed Tópicos Umbundu
