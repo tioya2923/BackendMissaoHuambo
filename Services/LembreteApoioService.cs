@@ -1,3 +1,4 @@
+using System.Net;
 using Microsoft.EntityFrameworkCore;
 using MissaoBackend.Data;
 using MissaoBackend.Models;
@@ -93,6 +94,13 @@ public class LembreteApoioService : BackgroundService
             .Where(l => l.Aprovada && l.Ativa)
             .ToListAsync(ct);
 
+        // Formas de apoio ativas (IBAN, Multicaixa, etc.), as mesmas que estavam no ecrã "Apoiar".
+        var formasApoio = await db.FormasApoio
+            .AsNoTracking()
+            .Where(f => f.Ativo)
+            .OrderBy(f => f.Ordem).ThenBy(f => f.Id)
+            .ToListAsync(ct);
+
         var enviados = 0;
         foreach (var loja in lojas)
         {
@@ -106,7 +114,7 @@ public class LembreteApoioService : BackgroundService
 
             var totalVendido = vendas.Sum(e => e.Total);
             var assunto = $"Obrigado por fazer parte da Ndatava, {loja.Nome}";
-            var corpo = MontarEmail(loja.Nome, referencia, totalVendido, vendas.Count, loja.Moeda, config);
+            var corpo = MontarEmail(loja.Nome, referencia, totalVendido, vendas.Count, loja.Moeda, formasApoio, config);
 
             await EmailService.EnviarAsync(config, loja.Email, assunto, corpo);
             enviados++;
@@ -115,12 +123,34 @@ public class LembreteApoioService : BackgroundService
     }
 
     private static string MontarEmail(
-        string nomeLoja, DateTime referencia, decimal totalVendido, int numeroEncomendas, string moeda, IConfiguration config)
+        string nomeLoja, DateTime referencia, decimal totalVendido, int numeroEncomendas, string moeda,
+        List<FormaApoio> formasApoio, IConfiguration config)
     {
         var frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_BASE_URL")
             ?? config["Frontend:BaseUrl"]
             ?? "https://ndatava.onrender.com";
         var linkApoiar = $"{frontendUrl.TrimEnd('/')}/apoiar";
+
+        // As formas na moeda da loja aparecem primeiro; as restantes vêm a seguir.
+        var ordenadas = formasApoio
+            .OrderByDescending(f => string.Equals(f.Moeda, moeda, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        var blocoFormas = string.Empty;
+        if (ordenadas.Count > 0)
+        {
+            var linhas = string.Concat(ordenadas.Select(f =>
+                $"<tr><td style='padding:10px 0;border-bottom:1px solid #eee;'>" +
+                $"<strong>{WebUtility.HtmlEncode(f.Label)}</strong>" +
+                (string.IsNullOrWhiteSpace(f.Descricao)
+                    ? ""
+                    : $"<br><span style='color:#666;font-size:13px;'>{WebUtility.HtmlEncode(f.Descricao)}</span>") +
+                $"<br><span style='font-size:16px;font-weight:bold;'>{WebUtility.HtmlEncode(f.Valor)}</span>" +
+                $"<br><span style='color:#888;font-size:12px;'>Moeda: {WebUtility.HtmlEncode(f.Moeda)}</span>" +
+                "</td></tr>"));
+            blocoFormas =
+                "<h3 style='margin:22px 0 4px;'>Formas de apoiar</h3>" +
+                $"<table style='width:100%;border-collapse:collapse;'>{linhas}</table>";
+        }
 
         var nomeMes = $"{MesesPt[referencia.Month - 1]} de {referencia.Year}";
 
@@ -146,6 +176,7 @@ public class LembreteApoioService : BackgroundService
                     a continuar. Não é uma cobrança nem uma condição para continuar a vender — é só um
                     convite, sem qualquer obrigação.
                 </p>
+                {blocoFormas}
                 <p style='margin-top:22px;'>
                     <a href='{linkApoiar}'
                        style='background:#181818;color:#ffffff;padding:12px 22px;border-radius:8px;
